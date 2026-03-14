@@ -1,0 +1,108 @@
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# -----------------------------
+# Virtual environments
+# -----------------------------
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# -----------------------------
+# Packaging / build
+# -----------------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# -----------------------------
+# Test / lint / coverage caches
+# -----------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# -----------------------------
+# Jupyter
+# -----------------------------
+.ipynb_checkpoints/
+
+# -----------------------------
+# IDE / OS
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# Logs
+# -----------------------------
+logs/
+*.log
+
+# -----------------------------
+# Secrets / credentials
+# -----------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+
+# -----------------------------
+# Project data (large/sensitive)
+# -----------------------------
+data/raw/
+data/processed/
+
+# -----------------------------
+# Model artifacts (large)
+# -----------------------------
+models/xgboost_model.pkl
+models/transformer_model/
+
+# -----------------------------
+# Common ML artifacts
+# -----------------------------
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.h5
+*.hdf5
+*.joblib
+*.pkl
+*.npy
+*.npz
+*.parquet
+*.feather
+
+# -----------------------------
+# Archives / binaries
+# -----------------------------
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
