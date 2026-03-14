@@ -8,7 +8,9 @@ pyarrow>=15.0,<20.0
 scikit-learn>=1.4,<2.0
 xgboost>=2.0,<3.0
 shap>=0.45,<1.0
-
+rarfile>=4.2,<5.0
+py7zr>=0.22,<1.0
+pyzipper>=0.3,<1.0
 # Transformer stack
 torch>=2.3,<3.0
 transformers>=4.40,<5.0
