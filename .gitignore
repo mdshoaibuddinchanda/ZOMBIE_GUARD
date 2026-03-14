@@ -111,7 +111,8 @@ models/transformer_model/
 data/raw/malicious/
 data/raw/benign/
 data/real_world_validation/
-data/generalisation
+data/generalisation/
+data/generalisation/**
 
 # Python
 __pycache__/
