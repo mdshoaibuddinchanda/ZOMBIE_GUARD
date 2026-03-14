@@ -27,7 +27,7 @@ import joblib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.extractor import extract_features
-from src.classifier import predict as xgb_predict, FEATURE_COLS
+from src.classifier import predict as xgb_predict
 from src.transformer_model import (
     ByteTransformerClassifier,
     ZipByteDataset,
@@ -36,7 +36,6 @@ from src.transformer_model import (
     _evaluate,
 )
 from torch.utils.data import DataLoader
-from sklearn.metrics import classification_report, confusion_matrix
 
 # -- Output dirs ---------------------------------------
 GEN_DIR = "data/generalisation"
@@ -46,11 +45,13 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 # -- Helpers -------------------------------------------
 def random_payload(size: int = 2048) -> bytes:
+    """Generate pseudo-random alphanumeric payload bytes."""
     base = ("".join(random.choices(string.ascii_letters + string.digits, k=256))).encode()
     return (base * (size // 256 + 1))[:size]
 
 
 def compress_deflate(data: bytes) -> bytes:
+    """Compress bytes and return raw DEFLATE stream."""
     return zlib.compress(data)[2:-4]
 
 
@@ -68,6 +69,7 @@ SIG_EOCD = b"PK\x05\x06"
 
 
 def _lfh(method, crc, comp_size, uncomp_size, fname):
+    """Build a ZIP Local File Header block."""
     return struct.pack(
         "<4sHHHHHIIIHH",
         SIG_LFH,
@@ -85,6 +87,7 @@ def _lfh(method, crc, comp_size, uncomp_size, fname):
 
 
 def _cdh(method, crc, comp_size, uncomp_size, fname, offset):
+    """Build a ZIP Central Directory Header block."""
     return struct.pack(
         "<4sHHHHHHIIIHHHHHII",
         SIG_CDH,
@@ -108,6 +111,7 @@ def _cdh(method, crc, comp_size, uncomp_size, fname, offset):
 
 
 def _eocd(n, cd_size, cd_offset):
+    """Build a ZIP End of Central Directory block."""
     return struct.pack("<4sHHHHIIH", SIG_EOCD, 0, 0, n, n, cd_size, cd_offset, 0)
 
 
@@ -163,7 +167,6 @@ RAR5_MAGIC = b"Rar!\x1a\x07\x01\x00"
 
 # Compression method constants in RAR header
 RAR_METHOD_STORE = 0x30
-RAR_METHOD_FASTEST = 0x31
 
 
 def generate_rar_like_samples(count: int = 200):
@@ -435,6 +438,7 @@ def evaluate_transformer_on_format(model, malicious_paths: list, benign_paths: l
 
 
 def print_results_table(results: list):
+    """Print a compact metrics table and persist results to CSV."""
     df = pd.DataFrame(results)
     print("\n== GENERALISATION STUDY RESULTS ====================")
     print(df[["format", "model", "samples", "recall", "f1", "roc_auc"]].to_string(index=False))

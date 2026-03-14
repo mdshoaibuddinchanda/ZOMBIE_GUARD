@@ -20,7 +20,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 from sklearn.metrics import (
@@ -70,9 +69,11 @@ class ZipByteDataset(Dataset):
 		self.seq_len = seq_len
 
 	def __len__(self):
+		"""Return dataset size."""
 		return len(self.file_paths)
 
 	def __getitem__(self, idx):
+		"""Load one file and return padded byte tokens with binary label."""
 		path = self.file_paths[idx]
 		label = self.labels[idx]
 
@@ -130,6 +131,7 @@ class ByteTransformerClassifier(nn.Module):
 		)
 
 	def forward(self, x: torch.Tensor) -> torch.Tensor:
+		"""Run forward pass for a batch of byte-token sequences."""
 		# x shape: (batch, seq_len)
 		positions = torch.arange(x.size(1), device=x.device).unsqueeze(0)
 		embedded = self.embedding(x) + self.pos_embedding(positions)
@@ -145,6 +147,7 @@ class ByteTransformerClassifier(nn.Module):
 
 # -- Training helpers --------------------------------------
 def _compute_metrics(y_true, y_pred, y_prob) -> dict:
+	"""Compute binary classification metrics for Transformer evaluation."""
 	return {
 		"accuracy": float(accuracy_score(y_true, y_pred)),
 		"precision": float(precision_score(y_true, y_pred, zero_division=0)),
@@ -155,6 +158,7 @@ def _compute_metrics(y_true, y_pred, y_prob) -> dict:
 
 
 def _train_epoch(model, loader, optimizer, criterion, device):
+	"""Train model for one epoch and return average batch loss."""
 	model.train()
 	total_loss = 0.0
 	for x_batch, y_batch in loader:
@@ -169,6 +173,7 @@ def _train_epoch(model, loader, optimizer, criterion, device):
 
 
 def _evaluate(model, loader, criterion, device):
+	"""Evaluate model and return metrics, probabilities, and labels."""
 	model.eval()
 	all_probs, all_labels = [], []
 	total_loss = 0.0
@@ -209,6 +214,7 @@ def load_file_paths_and_labels() -> tuple:
 
 # -- Main training -----------------------------------------
 def train_transformer():
+	"""Train and evaluate the byte-level Transformer with CV and holdout split."""
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	print(f"Device: {device}")
 

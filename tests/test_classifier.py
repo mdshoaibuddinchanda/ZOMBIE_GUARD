@@ -16,8 +16,8 @@ from src.extractor import extract_features
 from src.classifier import load_model, predict
 
 # -- Fixtures ---------------------------------------------------------------
-ZOMBIE_ZIP = "zombie.zip"
-NORMAL_ZIP = "normal.zip"
+ZOMBIE_ZIP = "tests/fixtures/zombie.zip"
+NORMAL_ZIP = "tests/fixtures/normal.zip"
 MODEL_PATH = "models/xgboost_model.pkl"
 FEATURES_CSV = "data/processed/features.csv"
 LABELS_CSV = "data/processed/labels.csv"
@@ -59,8 +59,8 @@ def test_normal_zip_features():
 	assert features["eocd_count"] == 1, "Normal EOCD count"
 
 
-def test_all_8_features_present():
-	"""Feature extractor must return all 8 expected keys."""
+def test_all_9_features_present():
+	"""Feature extractor must return all expected feature keys."""
 	features = extract_features(ZOMBIE_ZIP)
 	expected = [
 		"lf_compression_method",
@@ -71,6 +71,7 @@ def test_all_8_features_present():
 		"declared_vs_entropy_flag",
 		"eocd_count",
 		"file_size_bytes",
+		"lf_unknown_method",
 	]
 	for key in expected:
 		assert key in features, f"Missing feature key: {key}"

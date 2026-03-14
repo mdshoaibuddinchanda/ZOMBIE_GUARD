@@ -45,6 +45,7 @@ def get_threshold(filepath: str, default_threshold: float = DEFAULT_THRESHOLD) -
 
 
 def format_verdict(result: dict, threshold: float) -> str:
+	"""Format colorized detection verdict text from prediction output."""
 	prob = result["probability"]
 	label = 1 if prob >= threshold else 0
 
@@ -70,6 +71,7 @@ def format_verdict(result: dict, threshold: float) -> str:
 
 
 def print_features(features: dict):
+	"""Print extracted feature values with suspicious-signal highlighting."""
 	print(f"\n{BLUE}-- Extracted Features ---------------------------{RESET}")
 
 	signals = {
@@ -160,7 +162,7 @@ def batch_detect(
 	threshold: float = DEFAULT_THRESHOLD,
 	model_path: str = "models/xgboost_model.pkl",
 ):
-	"""Scan all ZIP files in a directory."""
+	"""Scan all ZIP files in a directory and print aggregate counts."""
 	zip_files = [f for f in os.listdir(directory) if f.lower().endswith(".zip")]
 
 	if not zip_files:

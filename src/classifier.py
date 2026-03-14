@@ -1,3 +1,10 @@
+"""
+classifier.py
+XGBoost training, evaluation, and inference utilities for ZombieGuard features.
+Part of ZombieGuard - Archive Header Evasion Detection System.
+CVE-2026-0866 | https://github.com/YOUR_USERNAME/zombieguard
+"""
+
 from __future__ import annotations
 
 import os
@@ -36,6 +43,7 @@ FEATURE_COLS = [
 # ── Config ───────────────────────────────────────────
 @dataclass
 class TrainingConfig:
+    """Configuration container for model training and validation settings."""
     random_state: int = 42
     n_splits: int = 5
     test_size: float = 0.2
@@ -43,6 +51,7 @@ class TrainingConfig:
 
 # ── Model builder ─────────────────────────────────────
 def _build_model(random_state: int) -> XGBClassifier:
+    """Construct the configured XGBoost binary classifier."""
     return XGBClassifier(
         n_estimators=300,
         max_depth=6,
@@ -58,6 +67,7 @@ def _build_model(random_state: int) -> XGBClassifier:
 
 # ── Metrics ───────────────────────────────────────────
 def _compute_metrics(y_true, y_pred, y_prob) -> Dict[str, float]:
+    """Compute standard binary classification metrics."""
     return {
         "accuracy":  float(accuracy_score(y_true, y_pred)),
         "precision": float(precision_score(y_true, y_pred, zero_division=0)),
@@ -73,6 +83,7 @@ def train_with_cross_validation(
     labels_path: str   = LABELS_PATH,
     config: TrainingConfig | None = None,
 ):
+    """Train and evaluate the XGBoost model with CV plus holdout testing."""
     if config is None:
         config = TrainingConfig()
 
@@ -183,12 +194,14 @@ def train_with_cross_validation(
 
 # ── Save / Load ───────────────────────────────────────
 def save_model(model: XGBClassifier, path: str = MODEL_PATH):
+    """Persist a trained XGBoost model to disk."""
     os.makedirs(Path(path).parent, exist_ok=True)
     joblib.dump(model, path)
     print(f"\nModel saved to: {path}")
 
 
 def load_model(path: str = MODEL_PATH) -> XGBClassifier:
+    """Load a persisted XGBoost model from disk."""
     if not os.path.isfile(path):
         raise FileNotFoundError(f"No model found at: {path}")
     return joblib.load(path)

@@ -1,3 +1,10 @@
+"""
+shap_analysis.py
+SHAP explainability analysis and figure generation for ZombieGuard models.
+Part of ZombieGuard - Archive Header Evasion Detection System.
+CVE-2026-0866 | https://github.com/YOUR_USERNAME/zombieguard
+"""
+
 import os
 import sys
 
@@ -42,6 +49,7 @@ FEATURE_LABELS = {
 
 
 def load_data():
+    """Load processed features/labels and map columns to display labels."""
     features_df = pd.read_csv(FEATURES_PATH)
     labels_df = pd.read_csv(LABELS_PATH)
     merged = features_df.merge(labels_df, on="filename", how="inner")
@@ -55,6 +63,7 @@ def load_data():
 
 
 def generate_shap_plots(x, model):
+    """Generate and save SHAP summary, beeswarm, and waterfall figures."""
     os.makedirs(FIGURES_DIR, exist_ok=True)
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(x)
@@ -121,7 +130,7 @@ def generate_shap_plots(x, model):
 
 
 def print_feature_ranking(shap_values, x):
-    import numpy as np
+    """Print SHAP feature ranking by mean absolute attribution."""
 
     mean_abs = pd.Series(data=abs(shap_values).mean(axis=0), index=x.columns).sort_values(
         ascending=False

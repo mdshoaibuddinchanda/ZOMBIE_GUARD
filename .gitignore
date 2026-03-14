@@ -106,3 +106,31 @@ models/transformer_model/
 *.rar
 *.tar
 *.gz
+
+# Malware samples - never commit these
+data/raw/malicious/
+data/raw/benign/
+data/real_world_validation/
+data/generalisation
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+
+# Models (large files)
+models/*.pkl
+models/*.pt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.txt
+detector_batch_output.txt

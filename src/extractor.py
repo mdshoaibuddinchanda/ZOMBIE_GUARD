@@ -1,3 +1,10 @@
+"""
+extractor.py
+Feature extraction for ZIP structural and entropy-based evasion signals.
+Part of ZombieGuard - Archive Header Evasion Detection System.
+CVE-2026-0866 | https://github.com/YOUR_USERNAME/zombieguard
+"""
+
 import os
 import struct
 
@@ -10,7 +17,6 @@ EOCD_SIGNATURE = b"PK\x05\x06"  # End of Central Directory signature
 
 # Compression method codes
 METHOD_STORE = 0
-METHOD_DEFLATE = 8
 ENTROPY_COMPRESSED_THRESHOLD = 7.0  # bytes above this = behaving like compressed data
 KNOWN_METHODS = {0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 14, 18, 19, 97, 98}
 
