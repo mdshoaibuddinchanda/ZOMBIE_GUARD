@@ -27,6 +27,7 @@ LABELS_PATH   = "data/processed/labels.csv"
 MODEL_PATH    = "models/xgboost_model.pkl"
 
 FEATURE_COLS = [
+    # Core attack signals - format agnostic
     "lf_compression_method",
     "cd_compression_method",
     "method_mismatch",
@@ -34,9 +35,13 @@ FEATURE_COLS = [
     "data_entropy_renyi",
     "declared_vs_entropy_flag",
     "eocd_count",
-    # file_size_bytes intentionally excluded -
-    # size is not a generalizable evasion signal
-    "lf_unknown_method",  # NEW - undefined method code signal
+    "lf_unknown_method",
+    # Per-entry inconsistency signals only
+    "suspicious_entry_count",
+    "suspicious_entry_ratio",
+    "any_crc_mismatch",
+    # Encryption signal
+    "is_encrypted",
 ]
 
 
@@ -93,7 +98,13 @@ def train_with_cross_validation(
     merged = features_df.merge(labels_df, on="filename", how="inner")
 
     # Convert boolean columns to int (XGBoost requirement)
-    for col in ["method_mismatch", "declared_vs_entropy_flag"]:
+    for col in [
+        "method_mismatch",
+        "declared_vs_entropy_flag",
+        "lf_crc_valid",
+        "any_crc_mismatch",
+        "is_encrypted",
+    ]:
         if col in merged.columns:
             merged[col] = merged[col].astype(int)
 

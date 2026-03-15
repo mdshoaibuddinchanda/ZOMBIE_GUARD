@@ -183,6 +183,144 @@ def random_filename(ext: str = ".bin") -> bytes:
     return name.encode()
 
 
+def add_decoy_entries_raw(zombie_zip_bytes: bytes, count: int = None) -> bytes:
+    """
+    Append benign decoy entries at the binary level without rewriting originals.
+
+    This preserves malicious LFH/CDH mismatches by avoiding zipfile-based copying.
+    """
+    if count is None:
+        count = random.randint(5, 50)
+
+    eocd_pos = zombie_zip_bytes.rfind(SIG_EOCD)
+    if eocd_pos == -1:
+        return zombie_zip_bytes
+
+    try:
+        eocd_fields = struct.unpack_from("<4sHHHHIIH", zombie_zip_bytes, eocd_pos)
+    except struct.error:
+        return zombie_zip_bytes
+
+    _, _, _, _, entries_total, _, cd_offset, _ = eocd_fields
+
+    if cd_offset > len(zombie_zip_bytes) or cd_offset > eocd_pos:
+        return zombie_zip_bytes
+
+    local_section = zombie_zip_bytes[:cd_offset]
+    cd_section = zombie_zip_bytes[cd_offset:eocd_pos]
+
+    decoy_filenames = [
+        "readme.txt",
+        "license.txt",
+        "manifest.json",
+        "config.ini",
+        "version.txt",
+        "changelog.md",
+        "docs/index.html",
+        "assets/style.css",
+        "src/main.py",
+        "src/utils.py",
+        "src/config.py",
+        "tests/test_main.py",
+        "data/sample.csv",
+        "build.gradle",
+        "pom.xml",
+        ".gitignore",
+        "Makefile",
+        "setup.py",
+        "pyproject.toml",
+    ]
+    random.shuffle(decoy_filenames)
+    selected = decoy_filenames[:min(count, len(decoy_filenames))]
+
+    new_local_entries = b""
+    new_cd_entries = b""
+
+    for fname_str in selected:
+        fname = fname_str.encode()
+        content = (
+            " ".join(
+                random.choices(
+                    [
+                        "config",
+                        "version",
+                        "path",
+                        "name",
+                        "value",
+                        "type",
+                        "source",
+                        "target",
+                        "module",
+                        "class",
+                    ],
+                    k=random.randint(10, 80),
+                )
+            )
+        ).encode()
+
+        compressed = _compress_deflate(content)
+        crc = zlib.crc32(content) & 0xFFFFFFFF
+        offset = len(local_section) + len(new_local_entries)
+
+        lfh = struct.pack(
+            "<4sHHHHHIIIHH",
+            SIG_LFH,
+            20,
+            0,
+            METHOD_DEFLATE,
+            0,
+            0,
+            crc,
+            len(compressed),
+            len(content),
+            len(fname),
+            0,
+        ) + fname + compressed
+
+        cdh = struct.pack(
+            "<4sHHHHHHIIIHHHHHII",
+            SIG_CDH,
+            20,
+            20,
+            0,
+            METHOD_DEFLATE,
+            0,
+            0,
+            crc,
+            len(compressed),
+            len(content),
+            len(fname),
+            0,
+            0,
+            0,
+            0,
+            0,
+            offset,
+        ) + fname
+
+        new_local_entries += lfh
+        new_cd_entries += cdh
+
+    new_local_section = local_section + new_local_entries
+    new_cd_section = cd_section + new_cd_entries
+    new_cd_offset = len(new_local_section)
+    new_total_entries = entries_total + len(selected)
+
+    new_eocd = struct.pack(
+        "<4sHHHHIIH",
+        SIG_EOCD,
+        0,
+        0,
+        new_total_entries,
+        new_total_entries,
+        len(new_cd_section),
+        new_cd_offset,
+        0,
+    )
+
+    return new_local_section + new_cd_section + new_eocd
+
+
 # -- Variant builders ---------------------------------------------------------
 
 def variant_classic_zombie(filepath: str):
@@ -448,6 +586,14 @@ def generate_all():
             filepath = os.path.join(OUTPUT_DIR, f"zombie_{variant_name}_{i:04d}.zip")
             try:
                 func(filepath)
+
+                # Add decoy entries to normalize entry-count distribution.
+                with open(filepath, "rb") as file:
+                    raw = file.read()
+                normalized = add_decoy_entries_raw(raw)
+                with open(filepath, "wb") as file:
+                    file.write(normalized)
+
                 total += 1
             except Exception as exc:
                 print(f"  ERROR at {filepath}: {exc}")

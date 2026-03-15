@@ -40,6 +40,7 @@ if __name__ == "__main__":
     df = pd.DataFrame(all_rows)
 
     feature_cols = [
+        # Original signals
         "lf_compression_method",
         "cd_compression_method",
         "method_mismatch",
@@ -49,6 +50,16 @@ if __name__ == "__main__":
         "eocd_count",
         "lf_unknown_method",
         "file_size_bytes",
+        # NEW - per-entry analysis
+        "entry_count",
+        "suspicious_entry_count",
+        "suspicious_entry_ratio",
+        "entropy_variance",
+        # NEW - CRC32 verification
+        "lf_crc_valid",
+        "any_crc_mismatch",
+        # NEW - encryption detection
+        "is_encrypted",
     ]
 
     print(f"\nDataset shape: {df.shape}")

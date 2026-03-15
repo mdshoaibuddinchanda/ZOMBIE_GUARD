@@ -19,19 +19,19 @@ ZombieGuard detects archive header evasion attacks where ZIP metadata is intenti
 
 ### XGBoost Classifier - Holdout Test Set (530 samples)
 
-| Accuracy | Precision | Recall | F1 | ROC-AUC |
-|:---:|:---:|:---:|:---:|:---:|
-| 0.9849 | 0.9962 | 0.9741 | 0.9850 | 0.9980 |
+| Accuracy | Precision | Recall | F1     | ROC-AUC |
+|:--------:|:---------:|:------:|:------:|:-------:|
+|  0.9849  | 0.9962    | 0.9741 | 0.9850 | 0.9980  |
 
 ### Real-World Validation - 157 MalwareBazaar Samples
 
-| Signal Type | Count | Share |
-|---|---:|---:|
-| Gootloader-style EOCD chaining (EOCD > 1) | 67 | 42.7% |
-| LFH/CDH method mismatch (CVE-2026-0866 class) | 1 | 0.6% |
-| Undefined LFH method code | 1 | 0.6% |
-| **Total header evasion detected** | **69** | **43.9%** |
-| Non-header-evasion ZIP malware (outside scope) | 88 | 56.1% |
+| Signal Type                                    | Count  | Share      |
+|------------------------------------------------|-------:|-----------:|
+| Gootloader-style EOCD chaining (EOCD > 1)      | 67     | 42.7%      |
+| LFH/CDH method mismatch (CVE-2026-0866 class)  | 1      | 0.6%       |
+| Undefined LFH method code                      | 1      | 0.6%       |
+| **Total header evasion detected**              | **69** | **43.9%**  |
+| Non-header-evasion ZIP malware (outside scope) | 88     | 56.1%      |
 
 > ZombieGuard is a targeted header evasion detector, not a general
 > malware scanner. The 88 clean files carry malware through other

@@ -375,6 +375,153 @@ def create_small_benign_zips(output_dir: str, count: int = 400):
     return generated
 
 
+def create_hard_negative_zips(output_dir: str, count: int = 200):
+    """
+    Create benign ZIPs with unusual but non-malicious structures.
+
+    These hard negatives reduce shortcut learning where a single structural
+    quirk becomes an absolute malicious rule.
+    """
+    import struct
+    import zlib
+
+    os.makedirs(output_dir, exist_ok=True)
+    generated = 0
+
+    sig_lfh = b"PK\x03\x04"
+    sig_cdh = b"PK\x01\x02"
+    sig_eocd = b"PK\x05\x06"
+
+    for i in range(count):
+        content = (
+            " ".join(
+                random.choices(
+                    [
+                        "the",
+                        "and",
+                        "for",
+                        "this",
+                        "that",
+                        "with",
+                        "from",
+                        "have",
+                        "will",
+                        "been",
+                        "they",
+                        "were",
+                    ],
+                    k=random.randint(50, 200),
+                )
+            )
+        ).encode()
+
+        compressed = zlib.compress(content)[2:-4]
+        crc = zlib.crc32(content) & 0xFFFFFFFF
+        fname = f"document_{i:04d}.txt".encode()
+
+        quirk = random.choice(
+            [
+                "extra_field_noise",
+                "old_method_code",
+                "zero_crc_stored",
+                "unusual_version",
+                "mismatched_sizes",
+            ]
+        )
+
+        if quirk == "extra_field_noise":
+            extra = os.urandom(random.randint(4, 20))
+            method = 8
+            use_crc = crc
+            lfh_comp_size = len(compressed)
+            cdh_comp_size = len(compressed)
+        elif quirk == "old_method_code":
+            extra = b""
+            method = 6
+            compressed = content
+            use_crc = crc
+            lfh_comp_size = len(compressed)
+            cdh_comp_size = len(compressed)
+        elif quirk == "zero_crc_stored":
+            extra = b""
+            method = 0
+            compressed = content
+            use_crc = 0
+            lfh_comp_size = len(compressed)
+            cdh_comp_size = len(compressed)
+        elif quirk == "unusual_version":
+            extra = b""
+            method = 8
+            use_crc = crc
+            lfh_comp_size = len(compressed)
+            cdh_comp_size = len(compressed)
+        else:  # mismatched_sizes
+            extra = b""
+            method = 8
+            use_crc = crc
+            lfh_comp_size = max(0, len(compressed) + random.randint(-2, 2))
+            cdh_comp_size = len(compressed)
+
+        ver = 45 if quirk == "unusual_version" else 20
+
+        lfh = struct.pack(
+            "<4sHHHHHIIIHH",
+            sig_lfh,
+            ver,
+            0,
+            method,
+            0,
+            0,
+            use_crc,
+            lfh_comp_size,
+            len(content),
+            len(fname),
+            len(extra),
+        ) + fname + extra + compressed
+
+        cd_offset = len(lfh)
+        cdh = struct.pack(
+            "<4sHHHHHHIIIHHHHHII",
+            sig_cdh,
+            ver,
+            ver,
+            0,
+            method,
+            0,
+            0,
+            use_crc,
+            cdh_comp_size,
+            len(content),
+            len(fname),
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ) + fname
+
+        eocd = struct.pack(
+            "<4sHHHHIIH",
+            sig_eocd,
+            0,
+            0,
+            1,
+            1,
+            len(cdh),
+            cd_offset,
+            0,
+        )
+
+        out_path = os.path.join(output_dir, f"hard_negative_{quirk}_{i:04d}.zip")
+        with open(out_path, "wb") as file:
+            file.write(lfh + cdh + eocd)
+        generated += 1
+
+    print(f"Created {generated} hard negative samples")
+    return generated
+
+
 if __name__ == "__main__":
     downloaded = 0
     failed = 0
@@ -409,6 +556,7 @@ if __name__ == "__main__":
     failed += office_failed
 
     create_small_benign_zips(OUTPUT_DIR, count=400)
+    create_hard_negative_zips(OUTPUT_DIR, count=200)
 
     print(f"\nDownloaded: {downloaded} benign samples")
     print(f"Failed: {failed}")

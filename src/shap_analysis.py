@@ -24,6 +24,7 @@ MODEL_PATH = "models/xgboost_model.pkl"
 FIGURES_DIR = "paper/figures"
 
 FEATURE_COLS = [
+    # Core attack signals - format agnostic
     "lf_compression_method",
     "cd_compression_method",
     "method_mismatch",
@@ -31,9 +32,13 @@ FEATURE_COLS = [
     "data_entropy_renyi",
     "declared_vs_entropy_flag",
     "eocd_count",
-    # file_size_bytes intentionally excluded -
-    # size is not a generalizable evasion signal
     "lf_unknown_method",
+    # Per-entry inconsistency signals only
+    "suspicious_entry_count",
+    "suspicious_entry_ratio",
+    "any_crc_mismatch",
+    # Encryption signal
+    "is_encrypted",
 ]
 
 FEATURE_LABELS = {
@@ -45,6 +50,10 @@ FEATURE_LABELS = {
     "declared_vs_entropy_flag": "Declared-vs-entropy mismatch",
     "eocd_count": "EOCD signature count",
     "lf_unknown_method": "Unknown method code (LFH)",
+    "suspicious_entry_count": "Suspicious entries",
+    "suspicious_entry_ratio": "Suspicious entry ratio",
+    "any_crc_mismatch": "Any CRC mismatch",
+    "is_encrypted": "Encrypted flag",
 }
 
 
@@ -53,7 +62,12 @@ def load_data():
     features_df = pd.read_csv(FEATURES_PATH)
     labels_df = pd.read_csv(LABELS_PATH)
     merged = features_df.merge(labels_df, on="filename", how="inner")
-    for col in ["method_mismatch", "declared_vs_entropy_flag"]:
+    for col in [
+        "method_mismatch",
+        "declared_vs_entropy_flag",
+        "any_crc_mismatch",
+        "is_encrypted",
+    ]:
         if col in merged.columns:
             merged[col] = merged[col].astype(int)
     x = merged[FEATURE_COLS].copy()
