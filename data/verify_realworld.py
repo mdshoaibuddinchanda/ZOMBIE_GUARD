@@ -1,5 +1,6 @@
 import os
 import sys
+import csv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -88,3 +89,23 @@ print(f"  Detected         : {len(detected)} ({len(detected)/len(files)*100:.1f}
 print(f"  Clean            : {len(clean)} ({len(clean)/len(files)*100:.1f}%)")
 print(f"  Errors           : {len(errors)}")
 print("------------------------------------------------------------")
+
+output_csv = "data/realworld_labels.csv"
+with open(output_csv, "w", newline="", encoding="utf-8") as f:
+    writer = csv.writer(f)
+    writer.writerow(["filename", "label", "signal"])
+    for e in detected:
+        signal = (
+            "gootloader"
+            if e["eocd_count"] > 1
+            else "mismatch"
+            if e["mismatch"]
+            else "entropy"
+            if e["entropy"] > 7.5
+            else "other"
+        )
+        writer.writerow([e["file"], 1, signal])
+    for e in clean:
+        writer.writerow([e["file"], 0, "none"])
+
+print(f"\nLabels saved to: {output_csv}")
