@@ -1,0 +1,4 @@
+model,accuracy,precision,recall,f1,roc_auc,TP,FP,TN,FN
+Model A - Synthetic-trained,1.0,1.0,1.0,1.0,1.0,32,0,239,0
+Model B - Real-trained,1.0,1.0,1.0,1.0,1.0,32,0,239,0
+Model C - Mixed,1.0,1.0,1.0,1.0,1.0,32,0,239,0
