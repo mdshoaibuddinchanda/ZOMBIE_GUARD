@@ -1,0 +1,4 @@
+model,accuracy,precision,recall,f1,roc_auc,cv_recall,cv_recall_ci
+Model A (Synthetic),1.0,1.0,1.0,1.0,1.0,,
+Model B (Real only),1.0,1.0,1.0,1.0,1.0,0.9692,0.9169-1.0215
+Model C (Mixed),1.0,1.0,1.0,1.0,1.0,1.0,nan-nan

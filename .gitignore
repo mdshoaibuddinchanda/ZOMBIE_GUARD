@@ -111,6 +111,12 @@ models/transformer_model/
 data/raw/malicious/
 data/raw/benign/
 data/real_world_validation/
+data/real_splits/
+data/real_train/
+data/real_test/
+data/realworld_labels.csv
+data/realworld_splits.csv
+data/bulk_downloads/
 data/generalisation/
 data/generalisation/**
 
