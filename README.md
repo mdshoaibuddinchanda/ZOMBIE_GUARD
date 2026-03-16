@@ -198,21 +198,25 @@ uv pip install -r requirements.txt
 ## Usage
 
 **Detect a single file:**
+
 ```bash
 python src/detector.py suspicious.zip
 ```
 
 **Verbose output showing all features:**
+
 ```bash
 python src/detector.py suspicious.zip --verbose
 ```
 
 **Batch scan a directory:**
+
 ```bash
 python src/detector.py --batch /path/to/folder/
 ```
 
 **Custom detection threshold:**
+
 ```bash
 python src/detector.py suspicious.zip --threshold 0.3
 ```
@@ -236,6 +240,7 @@ python src/classifier.py
 ```
 
 **For real-world validation (requires MalwareBazaar API key):**
+
 ```bash
 export MALWAREBAZAAR_API_KEY="your-key-here"
 python data/download_realworld.py
@@ -274,7 +279,7 @@ under distribution shift — not absence of signal.
 ## Research
 
 Paper in preparation:
-**"ZombieGuard: ML-Based Detection of Archive Header Evasion 
+**"ZombieGuard: ML-Based Detection of Archive Header Evasion
 via Structural Inconsistency and Entropy Analysis"**
 
 Target venue: Computers and Security (Elsevier)
@@ -300,9 +305,10 @@ Figures and results tables: `paper/figures/`
   author = {Md Shoaib Uddin Chanda},
   title  = {ZombieGuard: ML-Based Archive Header Evasion Detection},
   year   = {2026},
-  url    = {https://github.com/mdshoaibuddinchanda/ZOMBIE_GUARD}
+  url    = {https://github.com/mdshoaibuddinchanda/zombieguard}
 }
 ```
+
 │   └── download_realworld.py
 ├── tests/
 │   ├── fixtures/               # Local test ZIP fixtures
@@ -314,6 +320,7 @@ Figures and results tables: `paper/figures/`
 ├── notebooks/                  # Analysis notebooks (kept clean)
 ├── requirements.txt            # Project dependencies
 └── README.md
+
 ```
 
 ## Installation
