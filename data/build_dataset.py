@@ -16,11 +16,17 @@ os.makedirs("data/processed", exist_ok=True)
 
 def process_directory(directory: str, label: int) -> list:
     rows = []
-    files = [name for name in os.listdir(directory) if name.endswith(".zip")]
+    files = []
+    for root, _dirs, names in os.walk(directory):
+        for name in names:
+            if name.lower().endswith(".zip"):
+                files.append(os.path.join(root, name))
+
+    files.sort()
     print(f"\nProcessing {len(files)} files from {directory} (label={label})")
 
-    for i, filename in enumerate(files):
-        file_path = os.path.join(directory, filename)
+    for i, file_path in enumerate(files):
+        filename = os.path.relpath(file_path, directory).replace("\\", "/")
         features = extract_features(file_path)
         features["filename"] = filename
         features["label"] = label

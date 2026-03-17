@@ -382,13 +382,15 @@ def generate_fig1_zip_header(output_dir: str) -> tuple[str, str]:
     ax.axvline(7.0, linestyle="--", linewidth=1.0, color=MED_GRAY)
 
     callout = ax.text(
-        right_x + 0.45,
-        y_positions[0] + 1.95,
+        right_x + 2.15,
+        y_positions[0] - 0.35,
         "Bytes 8-9",
-        fontsize=8,
+        fontsize=7.8,
         color=DARK_GRAY,
+        ha="center",
+        va="center",
         bbox=dict(
-            boxstyle="round,pad=0.4",
+            boxstyle="round,pad=0.55",
             facecolor="#FFFDE7",
             edgecolor=AMBER,
             linewidth=1.0,

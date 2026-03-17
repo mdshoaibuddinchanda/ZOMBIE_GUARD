@@ -2,6 +2,8 @@ import os
 import random
 import time
 import io
+import csv
+import shutil
 import zipfile
 from typing import List, Tuple
 
@@ -522,6 +524,52 @@ def create_hard_negative_zips(output_dir: str, count: int = 200):
     return generated
 
 
+def import_fp_hard_negatives(
+    fp_results_path: str = "data/benign_fp_results.csv",
+    target_dir: str = "data/raw/benign/hard_negatives_fp_corpus",
+) -> int:
+    """
+    Copy benign real-world false positives into a dedicated hard-negative folder.
+
+    This teaches the model that high-entropy STORE archives can be benign.
+    """
+    if not os.path.exists(fp_results_path):
+        print(
+            "No FP results CSV found at "
+            f"{fp_results_path}; skipping FP hard-negative import."
+        )
+        return 0
+
+    os.makedirs(target_dir, exist_ok=True)
+    copied = 0
+
+    with open(fp_results_path, newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            status = str(row.get("status", "")).strip().lower()
+            flagged = str(row.get("flagged", "")).strip().lower() == "true"
+            src_path = row.get("file_path", "")
+            name = row.get("file_name", "")
+
+            if status != "ok" or not flagged or not src_path:
+                continue
+
+            if not os.path.exists(src_path):
+                print(f"  Missing FP source file, skipped: {src_path}")
+                continue
+
+            base_name = os.path.basename(src_path)
+            if not base_name.lower().endswith(".zip"):
+                base_name = f"{name}.zip" if name else f"fp_{copied:04d}.zip"
+
+            dst_path = os.path.join(target_dir, base_name)
+            shutil.copy2(src_path, dst_path)
+            copied += 1
+
+    print(f"Imported {copied} FP hard negatives into {target_dir}")
+    return copied
+
+
 if __name__ == "__main__":
     downloaded = 0
     failed = 0
@@ -557,6 +605,7 @@ if __name__ == "__main__":
 
     create_small_benign_zips(OUTPUT_DIR, count=400)
     create_hard_negative_zips(OUTPUT_DIR, count=200)
+    import_fp_hard_negatives()
 
     print(f"\nDownloaded: {downloaded} benign samples")
     print(f"Failed: {failed}")
