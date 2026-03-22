@@ -240,6 +240,18 @@ def predict(model: XGBClassifier, features: dict) -> dict:
 
     X = pd.DataFrame([row])
     prob = float(model.predict_proba(X)[0][1])
+
+    # Safety override for clear parser-confusion signatures.
+    # This keeps model-led behavior but ensures known high-risk structural
+    # contradictions are not downgraded by dataset drift.
+    strong_structural_evasion = (
+        bool(features.get("method_mismatch", False))
+        and bool(features.get("declared_vs_entropy_flag", False))
+        and float(features.get("suspicious_entry_ratio", 0.0)) >= 0.5
+    )
+    if strong_structural_evasion:
+        prob = max(prob, 0.95)
+
     label = int(prob >= 0.5)
 
     return {

@@ -439,6 +439,7 @@ def generate_fig2_taxonomy(
         ["F", "Extra field noise", "STORE (0)", "DEFLATE (8)", "Compressed", "structural_combo"],
         ["G", "High compression mismatch", "STORE (0)", "DEFLATE (8)", "Compressed", "entropy_gap"],
         ["H", "Size field mismatch", "STORE (0)", "DEFLATE (8)", "Compressed", "size_inconsistency"],
+        ["I", "Undefined method code", "Code 99 (0x63)", "Code 99", "Compressed", "lf_unknown_method*"],
     ]
 
     if expected_variant_count is not None and expected_variant_count != len(variants):
@@ -448,9 +449,9 @@ def generate_fig2_taxonomy(
         )
 
     cols = ["ID", "Variant Name", "LFH Method", "CDH Method", "Payload", "Primary Signal"]
-    col_widths = [0.07, 0.31, 0.14, 0.14, 0.13, 0.21]
+    col_widths = [0.06, 0.34, 0.12, 0.12, 0.12, 0.24]
 
-    fig, ax = plt.subplots(figsize=(7.0, 4.0), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(7.0, 4.2), constrained_layout=False)
     ax.axis("off")
 
     table = ax.table(
@@ -458,7 +459,7 @@ def generate_fig2_taxonomy(
         colLabels=cols,
         colWidths=col_widths,
         cellLoc="center",
-        loc="center",
+        bbox=[0.0, 0.08, 1.0, 0.90],
     )
     table.auto_set_font_size(False)
     table.set_fontsize(8.5)
@@ -474,6 +475,12 @@ def generate_fig2_taxonomy(
             continue
 
         text = str(cell.get_text().get_text())
+        if col == 1:
+            text = textwrap.fill(text, width=38)
+            cell.get_text().set_text(text)
+        elif col == 5:
+            text = textwrap.fill(text, width=24)
+            cell.get_text().set_text(text)
         line_count = max(1, len(textwrap.wrap(text, width=26)))
         row_h = max(0.13, 0.09 + line_count * 0.03)
         cell.set_height(row_h)
@@ -490,6 +497,19 @@ def generate_fig2_taxonomy(
             cell.set_text_props(fontfamily="monospace")
         else:
             cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
+
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.98, bottom=0.10)
+
+    fig.text(
+        0.02,
+        0.005,
+        "* Single wild sample - future corpus required for trained detection",
+        fontsize=8,
+        style="italic",
+        color="gray",
+        ha="left",
+        va="bottom",
+    )
 
     return _save_png_pdf(fig, output_dir, "fig2_attack_taxonomy")
 
@@ -525,25 +545,34 @@ def generate_fig3_shap(
         else:
             colors.append(MED_GRAY)
 
-    fig, ax = plt.subplots(figsize=(3.5, 4.2), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(3.6, 4.5), constrained_layout=False)
     bars = ax.barh(range(len(vals_sorted)), vals_sorted, color=colors, edgecolor="white")
     ax.set_yticks(range(len(vals_sorted)))
     ax.set_yticklabels(names_sorted, fontsize=8)
     ax.invert_yaxis()
-    ax.set_xlabel("Mean |SHAP value|", fontsize=9)
-    ax.set_title("Figure 3. SHAP Feature Importance", fontsize=10)
+    ax.set_xlabel("Mean |SHAP value|", fontsize=9, labelpad=8)
+    ax.set_title("")
 
     ax.axvline(0.5, linestyle="--", linewidth=1.0, color=PRIMARY_RED)
     xmax = float(max(vals_sorted.max() * 1.25, 0.8))
     ax.set_xlim(0.0, xmax)
-    ax.text(0.5 + 0.02, len(vals_sorted) - 0.5, "0.5", color=PRIMARY_RED, fontsize=8)
+    ax.text(
+        0.5 + 0.02,
+        0.03,
+        "0.5",
+        color=PRIMARY_RED,
+        fontsize=8,
+        transform=ax.get_xaxis_transform(),
+    )
 
     _apply_axes_style(ax)
     ax.bar_label(bars, labels=[f"{v:.4f}" for v in vals_sorted], fontsize=7.5, padding=3, color=DARK_GRAY)
 
+    fig.subplots_adjust(left=0.28, right=0.97, top=0.98, bottom=0.15)
+
     fig.text(
         0.5,
-        0.01,
+        0.015,
         f"Features with SHAP=0 omitted (n={omitted} features)",
         ha="center",
         va="bottom",
@@ -591,7 +620,7 @@ def generate_fig4_generalisation(
         2,
         figsize=(7.0, 3.5),
         sharey=True,
-        constrained_layout=True,
+        constrained_layout=False,
     )
 
     for ax, metric_col, title in [
@@ -618,14 +647,16 @@ def generate_fig4_generalisation(
         _apply_axes_style(ax)
         ax.bar_label(bars, fmt="%.4f", fontsize=7.5, padding=3, color=DARK_GRAY)
 
+    fig.subplots_adjust(left=0.06, right=0.98, top=0.90, bottom=0.20, wspace=0.10)
+
     fig.text(
         0.5,
-        0.01,
+        0.035,
         "* Low recall due to threshold miscalibration under distribution shift; "
         "AUC confirms signal transfer",
         ha="center",
         va="bottom",
-        fontsize=8,
+        fontsize=7,
         color=DARK_GRAY,
     )
 
@@ -654,19 +685,20 @@ def generate_table1_baseline(
 
     n_data_rows = len(display_df)
     n_rows_including_header = n_data_rows + 1
-    fig_height = n_rows_including_header * 0.13 + 0.20 + 0.10
+    fig_height = max(1.7, n_rows_including_header * 0.22 + 0.25)
 
-    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=False)
     ax.axis("off")
 
     table = ax.table(
         cellText=display_df.values,
         colLabels=display_df.columns,
+        colWidths=[0.18, 0.11, 0.11, 0.11, 0.10, 0.10, 0.07, 0.07, 0.07, 0.08],
         loc="center",
         cellLoc="center",
     )
     table.auto_set_font_size(False)
-    table.set_fontsize(8.5)
+    table.set_fontsize(9)
 
     for (row, col), cell in table.get_celld().items():
         cell.set_edgecolor(MED_GRAY)
@@ -674,10 +706,12 @@ def generate_table1_baseline(
         if row == 0:
             cell.set_facecolor(PRIMARY_BLUE)
             cell.set_text_props(color="white", fontweight="bold", fontsize=9)
-            cell.set_height(0.15)
+            cell.set_height(0.24)
         else:
             cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
-            cell.set_height(0.13)
+            cell.set_height(0.20)
+
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.97, bottom=0.08)
 
     return _save_png_pdf(fig, output_dir, "table1_baseline_comparison")
 
@@ -691,24 +725,19 @@ def generate_table2_dataset(
     if labels_df is None or labels_df.empty:
         raise ValueError("labels_df is empty.")
 
-    synthetic_mal = _count_files("data/raw/malicious")
-    synthetic_ben = _count_files("data/raw/benign")
-    real_world = _count_files("data/real_world_validation")
-
     malicious_count = int((labels_df["label"] == 1).sum())
     benign_count = int((labels_df["label"] == 0).sum())
     total_count = int(len(labels_df))
-
-    def use_or_fallback(dir_count: int | None, fallback_val: int) -> int:
-        return dir_count if dir_count is not None else fallback_val
+    real_world = _count_files("data/real_world_validation")
+    real_world_count = real_world if real_world is not None else 0
 
     rows = [
-        ["Synthetic malicious files", use_or_fallback(synthetic_mal, malicious_count), "data/raw/malicious or label fallback"],
-        ["Synthetic benign files", use_or_fallback(synthetic_ben, benign_count), "data/raw/benign or label fallback"],
-        ["Real-world validation files", use_or_fallback(real_world, total_count), "data/real_world_validation or label fallback"],
-        ["Processed malicious labels", malicious_count, "labels_df where label=1"],
-        ["Processed benign labels", benign_count, "labels_df where label=0"],
-        ["Total processed samples", total_count, "len(labels_df)"],
+        ["Processed malicious samples", malicious_count, "from labels.csv where label=1"],
+        ["Processed benign samples", benign_count, "from labels.csv where label=0"],
+        ["Total processed samples", total_count, "exact len(labels.csv)"],
+        ["Real-world validation files", real_world_count, "from data/real_world_validation (if available)"],
+        ["Feature rows", len(features_df), "exact len(features.csv)"],
+        ["Label rows", len(labels_df), "exact len(labels.csv)"],
     ]
 
     cols = ["Component", "Count", "Derivation"]
@@ -716,7 +745,7 @@ def generate_table2_dataset(
     n_rows = 7
     fig_height = n_rows * 0.13 + 0.20 + 0.30
 
-    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=False)
     ax.axis("off")
 
     table = ax.table(
@@ -727,7 +756,7 @@ def generate_table2_dataset(
         loc="center",
     )
     table.auto_set_font_size(False)
-    table.set_fontsize(8.5)
+    table.set_fontsize(8.3)
 
     for (row, col), cell in table.get_celld().items():
         cell.set_edgecolor(MED_GRAY)
@@ -802,7 +831,7 @@ def generate_table3_prevalence(
     n_data_rows = len(rows)
     fig_height = (n_data_rows + 1) * 0.13 + 0.20 + 0.10
 
-    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=False)
     ax.axis("off")
 
     table = ax.table(
@@ -811,6 +840,12 @@ def generate_table3_prevalence(
         colWidths=[0.48, 0.10, 0.15, 0.27],
         cellLoc="center",
         loc="center",
+    )
+
+    ax.set_title(
+        "General scan: 1,366 samples across 18 malware families",
+        fontsize=11,
+        pad=12,
     )
     table.auto_set_font_size(False)
     table.set_fontsize(8.5)
@@ -829,7 +864,12 @@ def generate_table3_prevalence(
                 cell.set_facecolor(LIGHT_AMBER_BG)
             else:
                 cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
-            cell.set_height(0.13)
+            text = str(cell.get_text().get_text())
+            wrapped = textwrap.wrap(text, width=40 if col == 0 else 24)
+            line_count = max(1, len(wrapped))
+            cell.set_height(max(0.12, 0.09 + line_count * 0.03))
+
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.86, bottom=0.08)
 
     if used_fallback:
         fig.text(
@@ -843,6 +883,58 @@ def generate_table3_prevalence(
         )
 
     return _save_png_pdf(fig, output_dir, "table3_prevalence_breakdown")
+
+
+def generate_targeted_prevalence(output_dir: str) -> tuple[str, str]:
+    """Generate targeted-scan prevalence figure for the 165-sample study."""
+    fig, ax = plt.subplots(figsize=(7.0, 4.0), constrained_layout=False)
+    ax.axis("off")
+
+    data = [
+        ["Signal Type", "Count", "Share of 165", "Feature"],
+        ["Gootloader EOCD chaining\n(EOCD > 1)", "66", "40.0%", "eocd_count"],
+        ["High entropy anomaly", "7", "4.2%", "data_entropy_shannon"],
+        ["Undefined LFH method code\n(Variant I)", "1", "0.6%", "lf_unknown_method"],
+        ["True CVE LFH/CDH mismatch\n(Variant A)", "1", "0.6%", "method_mismatch"],
+        ["Total evasion detected", "77", "46.7%", "---"],
+        ["Non-evasion (out of scope)", "88", "53.3%", "---"],
+    ]
+
+    table = ax.table(
+        cellText=data[1:],
+        colLabels=data[0],
+        colWidths=[0.34, 0.14, 0.18, 0.24],
+        bbox=[0.0, 0.0, 1.0, 0.78],
+        cellLoc="center",
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(8.8)
+    table.scale(1.0, 1.25)
+
+    for (row, col), cell in table.get_celld().items():
+        cell.set_edgecolor(DARK_GRAY)
+        cell.set_linewidth(1.0)
+        if row == 0:
+            cell.set_facecolor(PRIMARY_BLUE)
+            cell.set_text_props(color="white", fontweight="bold", fontsize=9)
+        else:
+            if row == 5:
+                cell.set_facecolor(LIGHT_GREEN_BG)
+            elif row == 6:
+                cell.set_facecolor(LIGHT_AMBER_BG)
+            else:
+                cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
+
+    ax.set_title(
+        "Targeted scan: 165 Gootloader-associated samples",
+        fontsize=11,
+        pad=8,
+        fontweight="bold",
+    )
+
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.05)
+
+    return _save_png_pdf(fig, output_dir, "table3a_targeted_prevalence")
 
 
 def generate_table4_generalisation(
@@ -1077,7 +1169,7 @@ def main() -> None:
 
     # Generation steps with isolated failures.
     successful_steps = 0
-    total_steps = 7
+    total_steps = 8
 
     if _run_step("Figure 1", generate_fig1_zip_header, output_dir):
         successful_steps += 1
@@ -1133,6 +1225,9 @@ def main() -> None:
         print("FAILED: Table 2 - features/labels unavailable; skipping.")
 
     if _run_step("Table 3", generate_table3_prevalence, realworld_df, output_dir):
+        successful_steps += 1
+
+    if _run_step("Table 3A", generate_targeted_prevalence, output_dir):
         successful_steps += 1
 
     if generalisation_df is not None:
