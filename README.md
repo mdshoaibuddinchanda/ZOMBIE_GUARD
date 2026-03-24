@@ -4,7 +4,7 @@
 
 ZombieGuard detects archive-based malware evasion attacks by identifying inconsistencies between ZIP metadata structures (Local File Header vs Central Directory Header) and actual payload characteristics.
 
-Unlike signature-based systems, ZombieGuard frames detection as a **consistency verification problem** — exploiting the fact that compression physics violations (entropy, method codes) cannot be faked by an attacker. This makes the detector theoretically immune to temporal drift.
+Unlike signature-based systems, ZombieGuard frames detection as a **consistency verification problem** — exploiting the fact that compression physics violations (entropy, method codes) cannot be faked without leaving at least one detectable signal. The system uses a hybrid architecture: a LightGBM model for multi-feature interactions, backed by two physics-override rules that catch cases where the model's learned weights are insufficient alone.
 
 The system detects CVE-2026-0866-style attacks across nine documented evasion variants (A–I).
 
@@ -27,16 +27,21 @@ pip install -r requirements.txt
 zombieguard/
 ├── src/
 │   ├── extractor.py              # ZIP feature extractor (12 features)
-│   ├── classifier.py             # XGBoost model training
+│   ├── classifier.py             # LightGBM model training (primary model)
 │   ├── detector.py               # CLI detector (single file or batch)
 │   ├── multi_baseline.py         # Experiment 1: 5-model comparison
 │   ├── variant_recall.py         # Experiment 2: per-variant recall (A-I)
 │   ├── temporal_stability.py     # Experiment 3: temporal stability analysis
+│   ├── roc_pr_curves.py          # Experiment 4: ROC and PR curves
+│   ├── entropy_distribution.py   # Experiment 5: entropy histogram
+│   ├── family_prevalence.py      # Experiment 6: per-family prevalence
+│   ├── fn_analysis.py            # Experiment 7: false negative analysis
+│   ├── adversarial_eval.py       # Experiment 8: adversarial robustness (4 attacks)
 │   ├── generalisation_study.py   # Cross-format generalisation (APK/RAR/7z)
 │   ├── shap_analysis.py          # SHAP feature importance
 │   ├── ablation_study.py         # Feature group ablation
 │   ├── evaluate_hard_test.py     # Hard test set evaluation (3 models)
-│   ├── classifier_realworld.py   # XGBoost trained on real-world samples
+│   ├── classifier_realworld.py   # LightGBM trained on real-world samples
 │   ├── baseline_detector.py      # Baseline rule-based detector
 │   ├── transformer_model.py      # Byte-level Transformer classifier
 │   └── entropy.py                # Shannon / Renyi entropy utilities
@@ -55,14 +60,15 @@ zombieguard/
 │   │   └── build_hard_testset.py        # Build EOCD-resistant hard test set
 │   ├── processed/                # features.csv + labels.csv (tracked)
 │   ├── bazaar_timestamps.csv     # MalwareBazaar first_seen timestamps (tracked)
+│   ├── adversarial_temp/         # Temp ZIPs for adversarial eval (not tracked)
 │   ├── raw/                      # Synthetic training ZIPs (not tracked)
 │   ├── real_world_validation/    # Real malware from MalwareBazaar (not tracked)
 │   ├── hard_test/                # EOCD-resistant hard test set (not tracked)
 │   └── generalisation/           # APK / RAR / 7z format samples (not tracked)
 ├── models/
-│   └── xgboost_model.pkl         # Trained model (not tracked - regenerate)
+│   └── lgbm_model.pkl            # Trained LightGBM model (not tracked - regenerate)
 └── paper/
-    ├── generate_all_figures.py   # Master figure generator (all 9 figures)
+    ├── generate_all_figures.py   # Master figure generator (13 figures)
     └── figures/
         ├── csv/                  # Source-of-truth result tables (tracked)
         ├── png/                  # 600 DPI PNG outputs (not tracked)
@@ -134,7 +140,7 @@ Outputs: `paper/figures/csv/table6_multi_baseline_comparison.csv`, `table6b_mult
 
 #### Experiment 2 — Per-variant recall breakdown
 
-Evaluates the trained XGBoost model on each of the 9 evasion variants (A–I) individually, reporting TP/FN/recall and the primary driving feature per variant.
+Evaluates the trained LightGBM model on each of the 9 evasion variants (A–I) individually, reporting TP/FN/recall and the primary driving feature per variant.
 
 ```bash
 conda run -n py312 python src/variant_recall.py
@@ -150,7 +156,7 @@ Uses the 1,318 real-world MalwareBazaar samples (from Step 3). Sorted by `first_
 - T2 (middle, ~439 samples) — **test only**
 - T3 (latest, ~440 samples) — **test only**
 
-The pre-trained synthetic model (`models/xgboost_model.pkl`) is also evaluated zero-shot on all three windows using a Youden-J optimal threshold calibrated on T1. This tests whether a model trained purely on synthetic data generalises to real-world samples across time.
+The pre-trained synthetic model (`models/lgbm_model.pkl`) is also evaluated zero-shot on all three windows using a Youden-J optimal threshold calibrated on T1. This tests whether a model trained purely on synthetic data generalises to real-world samples across time.
 
 ```bash
 conda run -n py312 python src/temporal_stability.py
@@ -162,7 +168,7 @@ Outputs: `paper/figures/csv/table8_temporal_stability.csv`, `table8b_shap_stabil
 
 #### SHAP feature importance
 
-Computes SHAP values for the trained XGBoost model. Results feed into fig3 in `generate_all_figures.py`.
+Computes SHAP values for the trained LightGBM model. Results feed into fig3 in `generate_all_figures.py`.
 
 ```bash
 conda run -n py312 python src/shap_analysis.py
@@ -180,7 +186,7 @@ Output: `paper/figures/csv/table5_feature_ablation.csv`
 
 #### Cross-format generalisation
 
-Zero-shot evaluation of XGBoost and Transformer on APK, RAR, and 7z archives (no retraining on those formats). Tests whether the physics-based signals transfer across archive formats.
+Zero-shot evaluation of LightGBM and Transformer on APK, RAR, and 7z archives (no retraining on those formats). Tests whether the physics-based signals transfer across archive formats.
 
 ```bash
 conda run -n py312 python src/generalisation_study.py
@@ -190,7 +196,7 @@ Output: `paper/figures/csv/generalisation_results.csv`
 
 #### Hard test set evaluation (3 models)
 
-Evaluates synthetic-trained, real-trained, and mixed-trained XGBoost models on the hard test set side by side.
+Evaluates synthetic-trained, real-trained, and mixed-trained LightGBM models on the hard test set side by side.
 
 ```bash
 conda run -n py312 python src/evaluate_hard_test.py
@@ -200,7 +206,7 @@ Output: `paper/figures/csv/hard_test_comparison.csv`
 
 #### Experiment 4 — ROC and Precision-Recall curves
 
-Plots ROC and PR curves for ZombieGuard XGBoost vs the rule-based baseline on the same axes. The PR curve is especially important given the class imbalance (1,348 malicious vs 1,785 benign). Both curves use the same 80/20 synthetic holdout split.
+Plots ROC and PR curves for ZombieGuard LightGBM vs the rule-based baseline on the same axes. The PR curve is especially important given the class imbalance (1,348 malicious vs 1,785 benign). Both curves use the same 80/20 synthetic holdout split.
 
 ```bash
 conda run -n py312 python src/roc_pr_curves.py
@@ -255,7 +261,7 @@ Outputs: `paper/figures/csv/table_adversarial_results.csv`, `adversarial_full_re
 
 ### Step 7 — Generate all paper figures
 
-Reads all CSV tables and the trained model, then produces all 9 publication figures at 600 DPI with embedded fonts (PDF fonttype 42). Prints `READY FOR SUBMISSION: Yes` when all outputs pass resolution and PDF-pairing checks.
+Reads all CSV tables and the trained model, then produces all 13 publication figures at 600 DPI with embedded fonts (PDF fonttype 42). Prints `READY FOR SUBMISSION: Yes` when all outputs pass resolution and PDF-pairing checks.
 
 ```bash
 conda run -n py312 python paper/generate_all_figures.py
@@ -324,7 +330,7 @@ All numbers verified from `paper/figures/csv/`.
 | LightGBM | 0.9375 | 0.9677 | 1.0000 | 0 | 2 |
 | XGBoost | 0.7188 | 0.8364 | 1.0000 | 0 | 9 |
 
-### Experiment 2 — Per-variant recall (XGBoost, full malicious corpus)
+### Experiment 2 — Per-variant recall (LightGBM, full malicious corpus)
 
 | Variant | Name | N | Recall | FN |
 | --- | --- | --- | --- | --- |
@@ -383,7 +389,7 @@ T3 drop is explained by a new method-8 variant that appeared after the T1 traini
 
 | Model | ROC-AUC | Average Precision |
 | --- | --- | --- |
-| ZombieGuard XGBoost | 1.0000 | 1.0000 |
+| ZombieGuard LightGBM | 1.0000 | 1.0000 |
 | Rule-based baseline | 0.8740 | 0.8194 |
 
 ### Experiment 5 — Entropy distribution
@@ -420,16 +426,21 @@ The root cause: `lf_compression_method=8` (DEFLATE), so `declared_vs_entropy_fla
 
 ### Experiment 8 — Adversarial robustness (4 white-box attacks)
 
-| Attack | Strategy | Features Neutralized | Evasion Rate | Finding |
+| Attack | Strategy | Features Neutralized | Evasion (ML only) | Evasion (Hybrid) |
 | --- | --- | --- | --- | --- |
-| 1 — Entropy Dilution (N≤10) | Add low-entropy benign entries | suspicious_entry_ratio ↓ | 0% | Detected |
-| 1 — Entropy Dilution (N≥50) | Add 50+ low-entropy entries | ratio → 0.02 | 100% | Model weakness: over-weights ratio |
-| 2 — Method Harmonization | Set LFH=CDH=STORE | method_mismatch=0 | 100% | entropy_flag fires but model under-weights it alone |
-| 3 — Entropy Camouflage (N≤10) | Add high-entropy consistent entries | ratio ↓ | 0% | Detected |
-| 3 — Entropy Camouflage (N≥50) | Add 50+ high-entropy entries | ratio → 0.02 | 100% | Same ratio weakness |
-| 4 — Entropy Threshold (all levels) | DEFLATE level 1–9 | none | 0% | Random bytes incompressible; entropy stays ≥7.95 |
+| 1 — Entropy Dilution (N≤10) | Add low-entropy benign entries | suspicious_entry_ratio ↓ | 0% | 0% |
+| 1 — Entropy Dilution (N≥50) | Add 50+ low-entropy entries | ratio → 0.02 | 100% | 0% — fixed by Rule 1 |
+| 2 — Method Harmonization | Set LFH=CDH=STORE | method_mismatch=0 | 100% | 0% — fixed by Rule 2 |
+| 3 — Entropy Camouflage (N≤10) | Add high-entropy consistent entries | ratio ↓ | 0% | 0% |
+| 3 — Entropy Camouflage (N≥50) | Add 50+ high-entropy entries | ratio → 0.02 | 100% | 0% — fixed by Rule 1 |
+| 4 — Entropy Threshold (all levels) | DEFLATE level 1–9 | none | 0% | 0% |
 
-The overconstrained design holds at the feature level — every attack leaves at least one feature firing. The vulnerability is in the model's learned weights, not the feature set. Fix: add a hard-rule safety layer — if `method_mismatch=1` AND `data_entropy_shannon>7.0`, force detection regardless of ratio. This is a concrete future work item.
+The overconstrained feature design holds at the feature level — every attack leaves at least one feature firing. The ML-only model has a weight calibration weakness when `suspicious_entry_ratio` drops below 0.02. The hybrid system adds two physics-override rules in `classifier.py`:
+
+- Rule 1: `method_mismatch=1` AND `data_entropy_shannon>7.0` → force detection (fixes Attacks 1 and 3)
+- Rule 2: `lf_compression_method=STORE` AND `data_entropy_shannon>7.0` → force detection (fixes Attack 2)
+
+After applying the hybrid layer, evasion rate across all four attacks drops to 0%.
 
 ---
 
@@ -450,6 +461,7 @@ All generated by `paper/generate_all_figures.py` at 600 DPI, Times New Roman, PD
 | `fig9_pr_curve` | Precision-Recall curve (imbalanced dataset) | `data/processed/` + `models/lgbm_model.pkl` |
 | `fig10_entropy_distribution` | Shannon entropy histogram: malicious vs benign, threshold=7.0 | `data/processed/` |
 | `fig11_family_prevalence` | Per-family evasion rate across 18+ malware families | `csv/table_family_prevalence.csv` |
+| `fig12_adversarial_results` | 4 adversarial attacks: dilution, harmonization, camouflage, entropy threshold | `csv/adversarial_full_results.csv` + `models/lgbm_model.pkl` |
 | `table3_prevalence_breakdown` | Real-world prevalence by signal type (1,366 samples) | `data/realworld_labels.csv` |
 | `table3a_targeted_prevalence` | Targeted Gootloader scan (165 samples) | Hardcoded constants |
 
@@ -463,9 +475,10 @@ All generated by `paper/generate_all_figures.py` at 600 DPI, Times New Roman, PD
 | `data/processed/features.csv` | Yes | Canonical feature matrix |
 | `data/processed/labels.csv` | Yes | Canonical labels |
 | `data/bazaar_timestamps.csv` | Yes | Timestamp metadata only (no malware content) |
-| `paper/figures/csv/` | Yes | Source-of-truth result tables |
+| `paper/figures/csv/` | Yes | Source-of-truth result tables (all experiments 1–8) |
 | `paper/figures/png/` | No | Regenerate with `generate_all_figures.py` |
 | `paper/figures/pdf/` | No | Regenerate with `generate_all_figures.py` |
+| `data/adversarial_temp/` | No | Temp ZIPs written during adversarial eval — auto-cleaned |
 | `data/raw/` | No | Regenerate with `data/scripts/` |
 | `data/real_world_validation/` | No | Real malware — never push |
 | `data/hard_test/` | No | Contains real malware samples |

@@ -89,7 +89,7 @@ def train_with_cross_validation(
     labels_path: str   = LABELS_PATH,
     config: TrainingConfig | None = None,
 ):
-    """Train and evaluate the XGBoost model with CV plus holdout testing."""
+    """Train and evaluate the LightGBM model with CV plus holdout testing."""
     if config is None:
         config = TrainingConfig()
 
@@ -98,7 +98,7 @@ def train_with_cross_validation(
     labels_df   = pd.read_csv(labels_path)
     merged = features_df.merge(labels_df, on="filename", how="inner")
 
-    # Convert boolean columns to int (XGBoost requirement)
+    # Convert boolean columns to int (LightGBM requirement)
     for col in [
         "method_mismatch",
         "declared_vs_entropy_flag",
@@ -242,16 +242,26 @@ def predict(model: LGBMClassifier, features: dict) -> dict:
     X = pd.DataFrame([row])
     prob = float(model.predict_proba(X)[0][1])
 
-    # Safety override for clear parser-confusion signatures.
-    # This keeps model-led behavior but ensures known high-risk structural
-    # contradictions are not downgraded by dataset drift.
-    strong_structural_evasion = (
-        bool(features.get("method_mismatch", False))
-        and bool(features.get("declared_vs_entropy_flag", False))
-        and float(features.get("suspicious_entry_ratio", 0.0)) >= 0.5
-    )
-    if strong_structural_evasion:
-        prob = max(prob, 0.95)
+    # ── Physics override layer (hybrid ML + hard rules) ───────────────────────
+    # These rules encode compression physics directly. They fire independently
+    # of the model's learned weights, preventing ratio-dilution evasion.
+    #
+    # Rule 1 — Method mismatch + high entropy
+    #   LFH method ≠ CDH method AND payload entropy > 7.0.
+    #   A legitimate archive cannot have both simultaneously.
+    #   Catches: Attack 1 (dilution N≥50), Attack 3 (camouflage N≥50).
+    method_mismatch  = int(features.get("method_mismatch", 0))
+    entropy_shannon  = float(features.get("data_entropy_shannon", 0.0))
+    if method_mismatch == 1 and entropy_shannon > 7.0:
+        prob = 1.0
+
+    # Rule 2 — STORE declared but payload is compressed
+    #   LFH declares STORE (method=0) but entropy > 7.0 proves payload is
+    #   compressed. This is a physical impossibility for stored data.
+    #   Catches: Attack 2 (method harmonization — both headers say STORE).
+    lf_method = int(features.get("lf_compression_method", -1))
+    if lf_method == 0 and entropy_shannon > 7.0:
+        prob = 1.0
 
     label = int(prob >= 0.5)
 

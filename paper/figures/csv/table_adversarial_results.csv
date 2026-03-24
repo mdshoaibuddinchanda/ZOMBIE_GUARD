@@ -1,6 +1,7 @@
-Attack,Strategy,Features Neutralized,Features Still Firing,Prob,Detected,Evasion Rate,Note
-1 — Entropy Dilution (N≤10),Add low-entropy benign entries,suspicious_entry_ratio ↓,"method_mismatch, data_entropy_shannon",1.0,Yes,0% at N≤10,Evades at N≥50 — model over-weights ratio; fix: add ratio floor rule
-1 — Entropy Dilution (N=1000),Add 1000 low-entropy benign entries,suspicious_entry_ratio → 0.001,"method_mismatch=1, entropy=7.9 (ignored by model)",0.0,No,100% at N≥50,Genuine model weakness — ratio dominates; method_mismatch=1 should override
-2 — Method Harmonization,"Set LFH=CDH=STORE, keep payload compressed",method_mismatch = 0,declared_vs_entropy_flag=1 (ignored by model),0.0,No,100%,Genuine model weakness — entropy_flag alone insufficient; needs weight boost
-3 — Entropy Camouflage (N≤10),Add high-entropy consistent benign entries,suspicious_entry_ratio ↓,"suspicious_entry_count=1, method_mismatch",1.0,Yes,0% at N≤10,Same ratio weakness as Attack 1 at N≥50
-4 — Entropy Threshold (all levels),Compress at DEFLATE level 1–9,none — entropy stays ≥7.95 for random data,"method_mismatch, declared_vs_entropy_flag",1.0,Yes,0%,Random bytes incompressible — entropy floor ~7.95 regardless of level
+Attack,Strategy,Features Neutralized,Evasion (ML only),Evasion (Hybrid),Residual weakness
+1 — Entropy Dilution (N≤10),Add low-entropy benign entries,suspicious_entry_ratio ↓,0%,0%,None at N≤10
+1 — Entropy Dilution (N≥50),Add 50+ low-entropy entries,ratio → 0.02,100%,0%,Fixed by Rule 1 (mismatch + entropy)
+2 — Method Harmonization,"Set LFH=CDH=STORE, keep payload compressed",method_mismatch = 0,100%,0%,Fixed by Rule 2 (STORE + high entropy)
+3 — Entropy Camouflage (N≤10),Add high-entropy consistent entries,suspicious_entry_ratio ↓,0%,0%,None at N≤10
+3 — Entropy Camouflage (N≥50),Add 50+ high-entropy entries,ratio → 0.02,100%,0%,Fixed by Rule 1 (mismatch + entropy)
+4 — Entropy Threshold (all levels),DEFLATE level 1–9,none — entropy stays ≥7.95,0%,0%,Never a threat

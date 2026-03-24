@@ -1,19 +1,19 @@
-attack,parameter,n_decoys,features_neutralized,suspicious_entry_ratio,data_entropy_shannon,method_mismatch,declared_vs_entropy_flag,prediction_prob,detected,evasion_success,lf_method,cd_method,suspicious_entry_count,deflate_level,payload_entropy
-Entropy Dilution,N=1,1.0,suspicious_entry_ratio,0.5,7.9041,1,1.0,1.0,True,False,,,,,
-Entropy Dilution,N=10,10.0,suspicious_entry_ratio,0.0909,7.9041,1,1.0,1.0,True,False,,,,,
-Entropy Dilution,N=50,50.0,suspicious_entry_ratio,0.0196,7.9041,1,1.0,0.0,False,True,,,,,
-Entropy Dilution,N=100,100.0,suspicious_entry_ratio,0.0099,7.9041,1,1.0,0.0,False,True,,,,,
-Entropy Dilution,N=500,500.0,suspicious_entry_ratio,0.002,7.9041,1,1.0,0.0,False,True,,,,,
-Entropy Dilution,N=1000,1000.0,suspicious_entry_ratio,0.001,7.9041,1,1.0,0.0,False,True,,,,,
-Method Harmonization,Variant A baseline,,none,,7.9019,1,1.0,1.0,True,False,0.0,8.0,,,
-Method Harmonization,Both STORE (attack),,method_mismatch,,7.9019,0,1.0,0.0,False,True,0.0,0.0,,,
-Method Harmonization,Both DEFLATE (ctrl),,method_mismatch,,7.9019,0,0.0,0.0,False,True,8.0,8.0,,,
-Entropy Camouflage,N=1,1.0,suspicious_entry_ratio,0.5,7.9156,1,,1.0,True,False,,,1.0,,
-Entropy Camouflage,N=10,10.0,suspicious_entry_ratio,0.0909,7.9152,1,,1.0,True,False,,,1.0,,
-Entropy Camouflage,N=50,50.0,suspicious_entry_ratio,0.0196,7.9225,1,,0.0,False,True,,,1.0,,
-Entropy Camouflage,N=100,100.0,suspicious_entry_ratio,0.0099,7.9304,1,,0.0,False,True,,,1.0,,
-Entropy Threshold,level=1,,none,,,1,1.0,1.0,True,False,,,,1.0,7.9507
-Entropy Threshold,level=2,,none,,,1,1.0,1.0,True,False,,,,2.0,7.9507
-Entropy Threshold,level=3,,none,,,1,1.0,1.0,True,False,,,,3.0,7.9507
-Entropy Threshold,level=6,,none,,,1,1.0,1.0,True,False,,,,6.0,7.9507
-Entropy Threshold,level=9,,none,,,1,1.0,1.0,True,False,,,,9.0,7.9507
+attack,parameter,n_decoys,features_neutralized,suspicious_entry_ratio,data_entropy_shannon,method_mismatch,declared_vs_entropy_flag,prob_ml_only,detected_ml_only,evasion_ml_only,prob_hybrid,detected_hybrid,evasion_hybrid,lf_method,cd_method,suspicious_entry_count,deflate_level,payload_entropy
+Entropy Dilution,N=1,1.0,suspicious_entry_ratio,0.5,7.9041,1,1.0,1.0,True,False,1.0,True,False,,,,,
+Entropy Dilution,N=10,10.0,suspicious_entry_ratio,0.0909,7.9041,1,1.0,1.0,True,False,1.0,True,False,,,,,
+Entropy Dilution,N=50,50.0,suspicious_entry_ratio,0.0196,7.9041,1,1.0,0.0,False,True,1.0,True,False,,,,,
+Entropy Dilution,N=100,100.0,suspicious_entry_ratio,0.0099,7.9041,1,1.0,0.0,False,True,1.0,True,False,,,,,
+Entropy Dilution,N=500,500.0,suspicious_entry_ratio,0.002,7.9041,1,1.0,0.0,False,True,1.0,True,False,,,,,
+Entropy Dilution,N=1000,1000.0,suspicious_entry_ratio,0.001,7.9041,1,1.0,0.0,False,True,1.0,True,False,,,,,
+Method Harmonization,Variant A baseline,,none,,7.9019,1,1.0,1.0,True,False,1.0,True,False,0.0,8.0,,,
+Method Harmonization,Both STORE (attack),,method_mismatch,,7.9019,0,1.0,0.0,False,True,1.0,True,False,0.0,0.0,,,
+Method Harmonization,Both DEFLATE (ctrl),,method_mismatch,,7.9019,0,0.0,0.0,False,True,0.0,False,True,8.0,8.0,,,
+Entropy Camouflage,N=1,1.0,suspicious_entry_ratio,0.5,7.9156,1,,1.0,True,False,1.0,True,False,,,1.0,,
+Entropy Camouflage,N=10,10.0,suspicious_entry_ratio,0.0909,7.9152,1,,1.0,True,False,1.0,True,False,,,1.0,,
+Entropy Camouflage,N=50,50.0,suspicious_entry_ratio,0.0196,7.9225,1,,0.0,False,True,1.0,True,False,,,1.0,,
+Entropy Camouflage,N=100,100.0,suspicious_entry_ratio,0.0099,7.9304,1,,0.0,False,True,1.0,True,False,,,1.0,,
+Entropy Threshold,level=1,,none,,,1,1.0,1.0,True,False,1.0,True,False,,,,1.0,7.9507
+Entropy Threshold,level=2,,none,,,1,1.0,1.0,True,False,1.0,True,False,,,,2.0,7.9507
+Entropy Threshold,level=3,,none,,,1,1.0,1.0,True,False,1.0,True,False,,,,3.0,7.9507
+Entropy Threshold,level=6,,none,,,1,1.0,1.0,True,False,1.0,True,False,,,,6.0,7.9507
+Entropy Threshold,level=9,,none,,,1,1.0,1.0,True,False,1.0,True,False,,,,9.0,7.9507
