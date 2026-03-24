@@ -1,0 +1,3 @@
+class,n,mean,std,pct_above_threshold
+Malicious,1348,7.4509,0.5595,65.8
+Benign,1785,7.2063,1.3481,76.19

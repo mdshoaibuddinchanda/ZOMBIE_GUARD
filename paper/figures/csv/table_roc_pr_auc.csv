@@ -1,0 +1,3 @@
+model,roc_auc
+ZombieGuard XGBoost,1.0
+Rule-based baseline,0.874

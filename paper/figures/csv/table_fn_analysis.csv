@@ -1,0 +1,2 @@
+filename,predicted_probability,lf_compression_method,cd_compression_method,method_mismatch,data_entropy_shannon,data_entropy_renyi,declared_vs_entropy_flag,eocd_count,lf_unknown_method,suspicious_entry_count,suspicious_entry_ratio,any_crc_mismatch,is_encrypted
+zombie_C_gootloader_0103.zip,0.3159,8,8,0,7.9615,5.0924,0,7,0,2,0.0769,1,0

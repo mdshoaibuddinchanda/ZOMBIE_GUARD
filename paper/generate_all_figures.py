@@ -598,6 +598,189 @@ def generate_table3a_targeted_prevalence() -> tuple[str, str]:
     return _save(fig, "table3a_targeted_prevalence")
 
 
+# ── Figure 8: ROC Curve ───────────────────────────────────────────────────────
+
+def generate_fig8_roc_curve(model, features_df: pd.DataFrame,
+                             labels_df: pd.DataFrame) -> tuple[str, str]:
+    """ROC curve: ZombieGuard XGBoost vs rule-based baseline."""
+    from sklearn.metrics import roc_auc_score, roc_curve
+    from sklearn.model_selection import train_test_split
+
+    merged = features_df.merge(labels_df, on="filename")
+    for col in ["method_mismatch", "declared_vs_entropy_flag",
+                "lf_crc_valid", "any_crc_mismatch", "is_encrypted"]:
+        if col in merged.columns:
+            merged[col] = merged[col].astype(int)
+    available = [c for c in FEATURE_COLS if c in merged.columns]
+    X = merged[available].fillna(0).astype(float)
+    y = merged["label"].astype(int)
+    _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+    xgb_proba = model.predict_proba(X_test)[:, 1]
+
+    # Rule-based score: sum of 4 binary signals, normalised
+    base_score = np.zeros(len(X_test))
+    for col, cond in [("method_mismatch", None), ("declared_vs_entropy_flag", None),
+                      ("any_crc_mismatch", None)]:
+        if col in X_test.columns:
+            base_score += X_test[col].astype(float).values
+    if "eocd_count" in X_test.columns:
+        base_score += (X_test["eocd_count"] > 1).astype(float).values
+    base_score /= 4.0
+
+    fpr_xgb,  tpr_xgb,  _ = roc_curve(y_test, xgb_proba)
+    fpr_base, tpr_base, _ = roc_curve(y_test, base_score)
+    auc_xgb  = roc_auc_score(y_test, xgb_proba)
+    auc_base = roc_auc_score(y_test, base_score)
+
+    fig, ax = plt.subplots(figsize=(4.5, 4.5), constrained_layout=True)
+    ax.plot(fpr_xgb,  tpr_xgb,  color=PRIMARY_BLUE, lw=2,
+            label=f"ZombieGuard XGBoost (AUC = {auc_xgb:.4f})")
+    ax.plot(fpr_base, tpr_base, color=AMBER, lw=2, linestyle="--",
+            label=f"Rule-based baseline (AUC = {auc_base:.4f})")
+    ax.plot([0, 1], [0, 1], color=MED_GRAY, lw=1, linestyle=":", label="Random classifier")
+    ax.set_xlim([-0.01, 1.01])
+    ax.set_ylim([-0.01, 1.05])
+    ax.set_xlabel("False Positive Rate", fontsize=9)
+    ax.set_ylabel("True Positive Rate", fontsize=9)
+    ax.set_title("Figure 8 — ROC Curve: ZombieGuard vs Rule-Based Baseline", fontsize=10)
+    ax.legend(loc="lower right", fontsize=8)
+    ax.grid(alpha=0.3, linewidth=0.4, color=MED_GRAY)
+
+    # Save AUC summary CSV
+    pd.DataFrame([
+        {"model": "ZombieGuard XGBoost", "roc_auc": round(auc_xgb, 4)},
+        {"model": "Rule-based baseline", "roc_auc": round(auc_base, 4)},
+    ]).to_csv(f"{CSV_DIR}/table_roc_pr_auc.csv", index=False)
+
+    return _save(fig, "fig8_roc_curve")
+
+
+# ── Figure 9: Precision-Recall Curve ─────────────────────────────────────────
+
+def generate_fig9_pr_curve(model, features_df: pd.DataFrame,
+                            labels_df: pd.DataFrame) -> tuple[str, str]:
+    """PR curve: ZombieGuard XGBoost vs rule-based baseline."""
+    from sklearn.metrics import average_precision_score, precision_recall_curve
+    from sklearn.model_selection import train_test_split
+
+    merged = features_df.merge(labels_df, on="filename")
+    for col in ["method_mismatch", "declared_vs_entropy_flag",
+                "lf_crc_valid", "any_crc_mismatch", "is_encrypted"]:
+        if col in merged.columns:
+            merged[col] = merged[col].astype(int)
+    available = [c for c in FEATURE_COLS if c in merged.columns]
+    X = merged[available].fillna(0).astype(float)
+    y = merged["label"].astype(int)
+    _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+    xgb_proba = model.predict_proba(X_test)[:, 1]
+    base_score = np.zeros(len(X_test))
+    for col in ["method_mismatch", "declared_vs_entropy_flag", "any_crc_mismatch"]:
+        if col in X_test.columns:
+            base_score += X_test[col].astype(float).values
+    if "eocd_count" in X_test.columns:
+        base_score += (X_test["eocd_count"] > 1).astype(float).values
+    base_score /= 4.0
+
+    prec_xgb,  rec_xgb,  _ = precision_recall_curve(y_test, xgb_proba)
+    prec_base, rec_base, _ = precision_recall_curve(y_test, base_score)
+    ap_xgb  = average_precision_score(y_test, xgb_proba)
+    ap_base = average_precision_score(y_test, base_score)
+    prevalence = float(y_test.sum()) / len(y_test)
+
+    fig, ax = plt.subplots(figsize=(4.5, 4.5), constrained_layout=True)
+    ax.plot(rec_xgb,  prec_xgb,  color=PRIMARY_BLUE, lw=2,
+            label=f"ZombieGuard XGBoost (AP = {ap_xgb:.4f})")
+    ax.plot(rec_base, prec_base, color=AMBER, lw=2, linestyle="--",
+            label=f"Rule-based baseline (AP = {ap_base:.4f})")
+    ax.axhline(y=prevalence, color=MED_GRAY, lw=1, linestyle=":",
+               label=f"No-skill baseline ({prevalence:.3f})")
+    ax.set_xlim([-0.01, 1.01])
+    ax.set_ylim([0.0, 1.05])
+    ax.set_xlabel("Recall", fontsize=9)
+    ax.set_ylabel("Precision", fontsize=9)
+    ax.set_title("Figure 9 — Precision-Recall Curve: ZombieGuard vs Rule-Based Baseline", fontsize=10)
+    ax.legend(loc="lower left", fontsize=8)
+    ax.grid(alpha=0.3, linewidth=0.4, color=MED_GRAY)
+
+    return _save(fig, "fig9_pr_curve")
+
+
+# ── Figure 10: Entropy Distribution ──────────────────────────────────────────
+
+def generate_fig10_entropy_distribution(features_df: pd.DataFrame,
+                                         labels_df: pd.DataFrame) -> tuple[str, str]:
+    """Overlapping Shannon entropy histograms: malicious vs benign, threshold=7.0."""
+    merged = features_df.merge(labels_df, on="filename")
+    mal_entropy = merged[merged["label"] == 1]["data_entropy_shannon"].dropna().values
+    ben_entropy = merged[merged["label"] == 0]["data_entropy_shannon"].dropna().values
+    threshold = 7.0
+    bins = np.linspace(0, 8, 65)
+
+    fig, ax = plt.subplots(figsize=(5.5, 3.8), constrained_layout=True)
+    ax.hist(ben_entropy, bins=bins, alpha=0.55, color=PRIMARY_BLUE,
+            label=f"Benign (n={len(ben_entropy)})", density=True, edgecolor="none")
+    ax.hist(mal_entropy, bins=bins, alpha=0.55, color=PRIMARY_RED,
+            label=f"Malicious (n={len(mal_entropy)})", density=True, edgecolor="none")
+    ax.axvline(x=threshold, color=AMBER, lw=2, linestyle="--",
+               label=f"Threshold = {threshold} bits/byte")
+    ymax = ax.get_ylim()[1]
+    ax.text(threshold + 0.05, ymax * 0.88,
+            f"declared_vs_entropy_flag\nthreshold = {threshold}",
+            fontsize=7.5, color=AMBER, va="top")
+    ax.set_xlabel("Shannon Entropy (bits/byte)", fontsize=9)
+    ax.set_ylabel("Density", fontsize=9)
+    ax.set_title("Figure 10 — Shannon Entropy Distribution: Malicious vs Benign", fontsize=10)
+    ax.set_xlim(0, 8)
+    ax.legend(fontsize=8)
+    ax.grid(axis="y", alpha=0.3, linewidth=0.4, color=MED_GRAY)
+
+    # Save stats CSV
+    pd.DataFrame([
+        {"class": "Malicious", "n": len(mal_entropy),
+         "mean": round(mal_entropy.mean(), 4), "std": round(mal_entropy.std(), 4),
+         "pct_above_threshold": round(100 * (mal_entropy >= threshold).mean(), 2)},
+        {"class": "Benign", "n": len(ben_entropy),
+         "mean": round(ben_entropy.mean(), 4), "std": round(ben_entropy.std(), 4),
+         "pct_above_threshold": round(100 * (ben_entropy >= threshold).mean(), 2)},
+    ]).to_csv(f"{CSV_DIR}/table_entropy_stats.csv", index=False)
+
+    return _save(fig, "fig10_entropy_distribution")
+
+
+# ── Figure 11: Per-Family Prevalence ─────────────────────────────────────────
+
+def generate_fig11_family_prevalence(family_df: pd.DataFrame) -> tuple[str, str]:
+    """Horizontal bar chart of evasion rate per malware family."""
+    plot_df = family_df[family_df["samples_scanned"] >= 5].copy()
+    plot_df = plot_df.sort_values("evasion_rate_pct", ascending=True)
+
+    labels = plot_df["family"].tolist()
+    rates  = plot_df["evasion_rate_pct"].tolist()
+    counts = plot_df["samples_scanned"].tolist()
+    colors = [SUCCESS_GREEN if r >= 40 else PRIMARY_BLUE if r >= 5 else MED_GRAY for r in rates]
+
+    fig, ax = plt.subplots(figsize=(6.5, max(3.5, len(labels) * 0.45)), constrained_layout=True)
+    y = np.arange(len(labels))
+    bars = ax.barh(y, rates, color=colors, edgecolor="white", linewidth=0.7)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=8.5)
+    ax.set_xlabel("Evasion Detection Rate (%)", fontsize=9)
+    ax.set_title("Figure 11 — Per-Family Evasion Prevalence (Real-World Scan)", fontsize=10)
+    ax.set_xlim(0, 105)
+    ax.axvline(x=6.8, color=AMBER, lw=1.2, linestyle="--", label="Overall rate (6.8%)")
+    ax.legend(fontsize=8)
+    ax.grid(axis="x", alpha=0.3, linewidth=0.4, color=MED_GRAY)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    for bar, n, r in zip(bars, counts, rates):
+        ax.text(r + 1.0, bar.get_y() + bar.get_height() / 2,
+                f"n={n}", va="center", fontsize=7.5, color=DARK_GRAY)
+
+    return _save(fig, "fig11_family_prevalence")
+
+
 # ── Verify outputs ────────────────────────────────────────────────────────────
 
 def verify_outputs() -> tuple[int, int, list[str]]:
@@ -679,6 +862,7 @@ def main() -> None:
     multi_baseline_df = _read_csv(f"{CSV_DIR}/table6b_multi_baseline_hard_test.csv", "multi_baseline_hard")
     variant_df       = _read_csv(f"{CSV_DIR}/table7_variant_recall.csv", "variant_recall")
     temporal_df      = _read_csv(f"{CSV_DIR}/table8_temporal_stability.csv", "temporal_stability")
+    family_df        = _read_csv(f"{CSV_DIR}/table_family_prevalence.csv", "family_prevalence")
     realworld_df     = _read_csv("data/realworld_labels.csv", "realworld") if Path("data/realworld_labels.csv").exists() else None
 
     # Merge features + labels for SHAP
@@ -769,6 +953,34 @@ def main() -> None:
     total += 1
     if _run("Table 3A — Targeted Prevalence", generate_table3a_targeted_prevalence):
         ok += 1
+
+    total += 1
+    if model is not None and features_df is not None and labels_df is not None:
+        if _run("Figure 8 — ROC Curve", generate_fig8_roc_curve, model, features_df, labels_df):
+            ok += 1
+    else:
+        print("\n--- Figure 8 --- SKIPPED (model or data unavailable)")
+
+    total += 1
+    if model is not None and features_df is not None and labels_df is not None:
+        if _run("Figure 9 — PR Curve", generate_fig9_pr_curve, model, features_df, labels_df):
+            ok += 1
+    else:
+        print("\n--- Figure 9 --- SKIPPED (model or data unavailable)")
+
+    total += 1
+    if features_df is not None and labels_df is not None:
+        if _run("Figure 10 — Entropy Distribution", generate_fig10_entropy_distribution, features_df, labels_df):
+            ok += 1
+    else:
+        print("\n--- Figure 10 --- SKIPPED (features/labels unavailable)")
+
+    total += 1
+    if family_df is not None:
+        if _run("Figure 11 — Family Prevalence", generate_fig11_family_prevalence, family_df):
+            ok += 1
+    else:
+        print("\n--- Figure 11 --- SKIPPED (table_family_prevalence.csv not found — run src/family_prevalence.py)")
 
     # ── Verify ────────────────────────────────────────────────────────────────
     png_count, pdf_count, warnings = verify_outputs()
