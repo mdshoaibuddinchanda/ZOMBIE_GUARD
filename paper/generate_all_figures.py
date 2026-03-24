@@ -635,7 +635,7 @@ def generate_fig8_roc_curve(model, features_df: pd.DataFrame,
 
     fig, ax = plt.subplots(figsize=(4.5, 4.5), constrained_layout=True)
     ax.plot(fpr_xgb,  tpr_xgb,  color=PRIMARY_BLUE, lw=2,
-            label=f"ZombieGuard XGBoost (AUC = {auc_xgb:.4f})")
+            label=f"ZombieGuard LightGBM (AUC = {auc_xgb:.4f})")
     ax.plot(fpr_base, tpr_base, color=AMBER, lw=2, linestyle="--",
             label=f"Rule-based baseline (AUC = {auc_base:.4f})")
     ax.plot([0, 1], [0, 1], color=MED_GRAY, lw=1, linestyle=":", label="Random classifier")
@@ -691,7 +691,7 @@ def generate_fig9_pr_curve(model, features_df: pd.DataFrame,
 
     fig, ax = plt.subplots(figsize=(4.5, 4.5), constrained_layout=True)
     ax.plot(rec_xgb,  prec_xgb,  color=PRIMARY_BLUE, lw=2,
-            label=f"ZombieGuard XGBoost (AP = {ap_xgb:.4f})")
+            label=f"ZombieGuard LightGBM (AP = {ap_xgb:.4f})")
     ax.plot(rec_base, prec_base, color=AMBER, lw=2, linestyle="--",
             label=f"Rule-based baseline (AP = {ap_base:.4f})")
     ax.axhline(y=prevalence, color=MED_GRAY, lw=1, linestyle=":",
@@ -735,6 +735,10 @@ def generate_fig10_entropy_distribution(features_df: pd.DataFrame,
     ax.set_xlim(0, 8)
     ax.legend(fontsize=8)
     ax.grid(axis="y", alpha=0.3, linewidth=0.4, color=MED_GRAY)
+    fig.text(0.5, -0.04,
+             "Entropy alone is insufficient — 76.2% of benign samples also exceed 7.0 bits/byte.\n"
+             "The threshold is one signal among 12 features; the ML model resolves the overlap.",
+             ha="center", fontsize=7.5, color=DARK_GRAY, style="italic")
 
     # Save stats CSV
     pd.DataFrame([
@@ -845,7 +849,7 @@ def main() -> None:
 
     # ── Load shared data ──────────────────────────────────────────────────────
     model = None
-    model_path = "models/xgboost_model.pkl"
+    model_path = "models/lgbm_model.pkl"
     if Path(model_path).exists():
         try:
             model = joblib.load(model_path)

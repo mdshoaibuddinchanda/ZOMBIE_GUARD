@@ -102,7 +102,7 @@ def detect_file(
 	filepath: str,
 	verbose: bool = False,
 	threshold: float = DEFAULT_THRESHOLD,
-	model_path: str = "models/xgboost_model.pkl",
+	model_path: str = "models/lgbm_model.pkl",
 ) -> dict:
 	"""
 	Run full detection on a single ZIP file.
@@ -160,7 +160,7 @@ def batch_detect(
 	directory: str,
 	verbose: bool = False,
 	threshold: float = DEFAULT_THRESHOLD,
-	model_path: str = "models/xgboost_model.pkl",
+	model_path: str = "models/lgbm_model.pkl",
 ):
 	"""Scan all ZIP files in a directory and print aggregate counts."""
 	zip_files = [f for f in os.listdir(directory) if f.lower().endswith(".zip")]
@@ -234,7 +234,7 @@ Examples:
 	)
 	parser.add_argument(
 		"--model",
-		default="models/xgboost_model.pkl",
+		default="models/lgbm_model.pkl",
 		help="Path to trained model file",
 	)
 

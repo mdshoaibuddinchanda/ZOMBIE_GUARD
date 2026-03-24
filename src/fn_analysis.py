@@ -38,7 +38,7 @@ from src.classifier import FEATURE_COLS
 
 FEATURES_PATH = "data/processed/features.csv"
 LABELS_PATH   = "data/processed/labels.csv"
-MODEL_PATH    = "models/xgboost_model.pkl"
+MODEL_PATH    = "models/lgbm_model.pkl"
 CSV_DIR       = "paper/figures/csv"
 RANDOM_STATE  = 42
 

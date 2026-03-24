@@ -37,8 +37,7 @@ from src.classifier import FEATURE_COLS
 
 FEATURES_PATH = "data/processed/features.csv"
 LABELS_PATH   = "data/processed/labels.csv"
-MODEL_PATH    = "models/xgboost_model.pkl"
-CSV_DIR       = "paper/figures/csv"
+MODEL_PATH    = "models/lgbm_model.pkl"CSV_DIR       = "paper/figures/csv"
 PNG_DIR       = "paper/figures/png"
 PDF_DIR       = "paper/figures/pdf"
 RANDOM_STATE  = 42
@@ -121,7 +120,7 @@ def generate_roc_curve(fpr_xgb, tpr_xgb, auc_xgb,
     fig, ax = plt.subplots(figsize=(4.5, 4.5), constrained_layout=True)
 
     ax.plot(fpr_xgb, tpr_xgb, color=PRIMARY_BLUE, lw=2,
-            label=f"ZombieGuard XGBoost (AUC = {auc_xgb:.4f})")
+            label=f"ZombieGuard LightGBM (AUC = {auc_xgb:.4f})")
     ax.plot(fpr_base, tpr_base, color=AMBER, lw=2, linestyle="--",
             label=f"Rule-based baseline (AUC = {auc_base:.4f})")
     ax.plot([0, 1], [0, 1], color=MED_GRAY, lw=1, linestyle=":", label="Random classifier")
@@ -143,7 +142,7 @@ def generate_pr_curve(prec_xgb, rec_xgb, ap_xgb,
     fig, ax = plt.subplots(figsize=(4.5, 4.5), constrained_layout=True)
 
     ax.plot(rec_xgb, prec_xgb, color=PRIMARY_BLUE, lw=2,
-            label=f"ZombieGuard XGBoost (AP = {ap_xgb:.4f})")
+            label=f"ZombieGuard LightGBM (AP = {ap_xgb:.4f})")
     ax.plot(rec_base, prec_base, color=AMBER, lw=2, linestyle="--",
             label=f"Rule-based baseline (AP = {ap_base:.4f})")
     ax.axhline(y=baseline_prevalence, color=MED_GRAY, lw=1, linestyle=":",
@@ -190,7 +189,7 @@ def main():
     ap_base = average_precision_score(y_test, base_score)
     prevalence = float(y_test.sum()) / len(y_test)
 
-    print(f"\nXGBoost  — ROC-AUC: {auc_xgb:.4f}  AP: {ap_xgb:.4f}")
+    print(f"\nLightGBM — ROC-AUC: {auc_xgb:.4f}  AP: {ap_xgb:.4f}")
     print(f"Baseline — ROC-AUC: {auc_base:.4f}  AP: {ap_base:.4f}")
     print(f"Class prevalence in test set: {prevalence:.4f}")
 

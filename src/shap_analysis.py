@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 FEATURES_PATH = "data/processed/features.csv"
 LABELS_PATH = "data/processed/labels.csv"
-MODEL_PATH = "models/xgboost_model.pkl"
+MODEL_PATH = "models/lgbm_model.pkl"
 FIGURES_DIR = "paper/figures"
 
 FEATURE_COLS = [

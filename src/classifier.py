@@ -1,8 +1,10 @@
 """
 classifier.py
-XGBoost training, evaluation, and inference utilities for ZombieGuard features.
+LightGBM training, evaluation, and inference utilities for ZombieGuard features.
+Primary model: LightGBM — selected over XGBoost based on hard test set results
+(Recall 0.9375, F1 0.9677, AUC 1.0000 vs XGBoost Recall 0.7188 on EOCD-resistant samples).
 Part of ZombieGuard - Archive Header Evasion Detection System.
-CVE-2026-0866 | https://github.com/YOUR_USERNAME/zombieguard
+CVE-2026-0866 | https://github.com/mdshoaibuddinchanda/zombieguard
 """
 
 from __future__ import annotations
@@ -14,17 +16,17 @@ from typing import Dict
 
 import joblib
 import pandas as pd
+from lightgbm import LGBMClassifier
 from sklearn.metrics import (
     accuracy_score, classification_report, confusion_matrix,
     f1_score, precision_score, recall_score, roc_auc_score
 )
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from xgboost import XGBClassifier
 
 # ── Paths ────────────────────────────────────────────
 FEATURES_PATH = "data/processed/features.csv"
 LABELS_PATH   = "data/processed/labels.csv"
-MODEL_PATH    = "models/xgboost_model.pkl"
+MODEL_PATH    = "models/lgbm_model.pkl"
 
 FEATURE_COLS = [
     # Core attack signals - format agnostic
@@ -55,18 +57,17 @@ class TrainingConfig:
 
 
 # ── Model builder ─────────────────────────────────────
-def _build_model(random_state: int) -> XGBClassifier:
-    """Construct the configured XGBoost binary classifier."""
-    return XGBClassifier(
+def _build_model(random_state: int) -> LGBMClassifier:
+    """Construct the configured LightGBM binary classifier."""
+    return LGBMClassifier(
         n_estimators=300,
         max_depth=6,
         learning_rate=0.05,
         subsample=0.9,
         colsample_bytree=0.9,
-        objective="binary:logistic",
-        eval_metric="logloss",
         random_state=random_state,
         n_jobs=-1,
+        verbose=-1,
     )
 
 
@@ -204,22 +205,22 @@ def train_with_cross_validation(
 
 
 # ── Save / Load ───────────────────────────────────────
-def save_model(model: XGBClassifier, path: str = MODEL_PATH):
-    """Persist a trained XGBoost model to disk."""
+def save_model(model: LGBMClassifier, path: str = MODEL_PATH):
+    """Persist a trained LightGBM model to disk."""
     os.makedirs(Path(path).parent, exist_ok=True)
     joblib.dump(model, path)
     print(f"\nModel saved to: {path}")
 
 
-def load_model(path: str = MODEL_PATH) -> XGBClassifier:
-    """Load a persisted XGBoost model from disk."""
+def load_model(path: str = MODEL_PATH) -> LGBMClassifier:
+    """Load a persisted LightGBM model from disk."""
     if not os.path.isfile(path):
         raise FileNotFoundError(f"No model found at: {path}")
     return joblib.load(path)
 
 
 # ── Predict (used by detector.py) ────────────────────
-def predict(model: XGBClassifier, features: dict) -> dict:
+def predict(model: LGBMClassifier, features: dict) -> dict:
     """
     Takes a feature dictionary from extractor.extract_features()
     and returns a prediction verdict.

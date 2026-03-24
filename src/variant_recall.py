@@ -36,7 +36,7 @@ from src.classifier import FEATURE_COLS, predict
 
 # -- Paths -------------------------------------------------------------------
 MALICIOUS_DIR = "data/raw/malicious"
-MODEL_PATH    = "models/xgboost_model.pkl"
+MODEL_PATH    = "models/lgbm_model.pkl"
 CSV_DIR       = "paper/figures/csv"
 PNG_DIR       = "paper/figures/png"
 PDF_DIR       = "paper/figures/pdf"

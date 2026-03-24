@@ -134,7 +134,7 @@ def compare_with_xgboost(baseline_metrics: dict) -> None:
         stratify=y
     )
 
-    model = joblib.load("models/xgboost_model.pkl")
+    model = joblib.load("models/lgbm_model.pkl")
     y_pred = model.predict(X_test)
     y_prob = model.predict_proba(X_test)[:, 1]
     cm = confusion_matrix(y_test, y_pred)

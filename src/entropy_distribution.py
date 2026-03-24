@@ -95,6 +95,9 @@ def main():
     print(f"  mean={ben_entropy.mean():.4f}  std={ben_entropy.std():.4f}")
     print(f"  min={ben_entropy.min():.4f}  max={ben_entropy.max():.4f}")
     print(f"  % above {THRESHOLD}: {100*(ben_entropy >= THRESHOLD).mean():.1f}%")
+    print(f"\nNote: {100*(ben_entropy >= THRESHOLD).mean():.1f}% of benign samples also exceed the")
+    print(f"  threshold — entropy alone is insufficient for detection. The 7.0 threshold")
+    print(f"  is one signal among 12 features; the ML model resolves the overlap region.")
 
     # Save stats CSV
     Path(CSV_DIR).mkdir(parents=True, exist_ok=True)

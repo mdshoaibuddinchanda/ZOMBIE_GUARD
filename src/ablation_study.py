@@ -55,7 +55,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        default="models/xgboost_model.pkl",
+        default="models/lgbm_model.pkl",
         help="Path to trained XGBoost model.",
     )
     parser.add_argument(
