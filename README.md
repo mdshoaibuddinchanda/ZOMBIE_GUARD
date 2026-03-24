@@ -238,6 +238,21 @@ conda run -n py312 python src/fn_analysis.py
 
 Output: `paper/figures/csv/table_fn_analysis.csv`
 
+#### Experiment 8 — Adversarial robustness evaluation
+
+Four white-box adversarial attacks against ZombieGuard LightGBM. Each attack neutralises one or more features while keeping the payload deliverable. Tests whether the overconstrained feature design holds empirically.
+
+- Attack 1: Entropy Dilution — add N low-entropy benign entries (target: suspicious_entry_ratio)
+- Attack 2: Method Harmonization — set LFH=CDH=STORE, keep payload compressed (target: method_mismatch)
+- Attack 3: Entropy Camouflage — add N high-entropy consistent benign entries (target: ratio)
+- Attack 4: Entropy Threshold — compress at DEFLATE level 1 to reduce entropy below 7.0
+
+```bash
+conda run -n py312 python src/adversarial_eval.py
+```
+
+Outputs: `paper/figures/csv/table_adversarial_results.csv`, `adversarial_full_results.csv`, `paper/figures/png/fig12_adversarial_results.png`
+
 ### Step 7 — Generate all paper figures
 
 Reads all CSV tables and the trained model, then produces all 9 publication figures at 600 DPI with embedded fonts (PDF fonttype 42). Prints `READY FOR SUBMISSION: Yes` when all outputs pass resolution and PDF-pairing checks.
@@ -402,6 +417,19 @@ Note on the two Gootloader figures: the general scan reports 6.3% evasion rate a
 The one missed sample is `zombie_C_gootloader_0103.zip` (Variant C — Gootloader concatenation). Its predicted probability was 0.316, below the 0.5 threshold.
 
 The root cause: `lf_compression_method=8` (DEFLATE), so `declared_vs_entropy_flag` never fires even though entropy is 7.96. `method_mismatch=0` because LFH and CDH agree. The only active signals were `eocd_count=7` and `any_crc_mismatch=1`, which together were insufficient to cross the decision boundary. Lowering the threshold to 0.35 would catch this sample at the cost of approximately 2 additional false positives.
+
+### Experiment 8 — Adversarial robustness (4 white-box attacks)
+
+| Attack | Strategy | Features Neutralized | Evasion Rate | Finding |
+| --- | --- | --- | --- | --- |
+| 1 — Entropy Dilution (N≤10) | Add low-entropy benign entries | suspicious_entry_ratio ↓ | 0% | Detected |
+| 1 — Entropy Dilution (N≥50) | Add 50+ low-entropy entries | ratio → 0.02 | 100% | Model weakness: over-weights ratio |
+| 2 — Method Harmonization | Set LFH=CDH=STORE | method_mismatch=0 | 100% | entropy_flag fires but model under-weights it alone |
+| 3 — Entropy Camouflage (N≤10) | Add high-entropy consistent entries | ratio ↓ | 0% | Detected |
+| 3 — Entropy Camouflage (N≥50) | Add 50+ high-entropy entries | ratio → 0.02 | 100% | Same ratio weakness |
+| 4 — Entropy Threshold (all levels) | DEFLATE level 1–9 | none | 0% | Random bytes incompressible; entropy stays ≥7.95 |
+
+The overconstrained design holds at the feature level — every attack leaves at least one feature firing. The vulnerability is in the model's learned weights, not the feature set. Fix: add a hard-rule safety layer — if `method_mismatch=1` AND `data_entropy_shannon>7.0`, force detection regardless of ratio. This is a concrete future work item.
 
 ---
 
