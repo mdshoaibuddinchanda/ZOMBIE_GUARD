@@ -1,11 +1,18 @@
 """
 generate_all_figures.py
-Generates publication-quality figures and tables for the ZombieGuard paper.
+Generates ALL publication-quality figures and tables for the ZombieGuard paper.
+
+Output layout:
+  paper/figures/png/  — 600 DPI PNG (for paper submission)
+  paper/figures/pdf/  — vector PDF (for LaTeX inclusion)
+  paper/figures/csv/  — source-of-truth data tables (version-controlled)
 
 Design constraints:
-- All metric values must come from CSV/model/SHAP runtime computation.
-- Each output is saved as 600 DPI PNG and PDF.
-- Failures are isolated so one figure failure does not stop others.
+  - 600 DPI raster output, PDF fonttype 42 (embeds fonts for submission)
+  - All metric values sourced from CSV files or live model computation
+  - Each step fails in isolation — one failure does not stop others
+  - Tables: CSV only (no image tables from experiment scripts)
+  - Figures: PNG + PDF at publication quality
 """
 
 from __future__ import annotations
@@ -30,36 +37,21 @@ from matplotlib.patches import FancyBboxPatch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Try importing shared feature configs. Fall back if import fails.
 try:
     from src.classifier import FEATURE_COLS
 except Exception as exc:
-    print(
-        "WARNING: Failed to import FEATURE_COLS from src.classifier; "
-        f"using fallback. ({exc})"
-    )
+    print(f"WARNING: Failed to import FEATURE_COLS from src.classifier ({exc}); using fallback.")
     FEATURE_COLS = [
-        "lf_compression_method",
-        "cd_compression_method",
-        "method_mismatch",
-        "data_entropy_shannon",
-        "data_entropy_renyi",
-        "declared_vs_entropy_flag",
-        "eocd_count",
-        "lf_unknown_method",
-        "suspicious_entry_count",
-        "suspicious_entry_ratio",
-        "any_crc_mismatch",
-        "is_encrypted",
+        "lf_compression_method", "cd_compression_method", "method_mismatch",
+        "data_entropy_shannon", "data_entropy_renyi", "declared_vs_entropy_flag",
+        "eocd_count", "lf_unknown_method", "suspicious_entry_count",
+        "suspicious_entry_ratio", "any_crc_mismatch", "is_encrypted",
     ]
 
 try:
     from src.shap_analysis import FEATURE_LABELS
 except Exception as exc:
-    print(
-        "WARNING: Failed to import FEATURE_LABELS from src.shap_analysis; "
-        f"using fallback. ({exc})"
-    )
+    print(f"WARNING: Failed to import FEATURE_LABELS from src.shap_analysis ({exc}); using fallback.")
     FEATURE_LABELS = {
         "lf_compression_method": "LFH compression method",
         "cd_compression_method": "CDH compression method",
@@ -75,8 +67,7 @@ except Exception as exc:
         "is_encrypted": "Encrypted flag",
     }
 
-
-# Prevalence fallback constants (allowed fallback path only).
+# Fallback prevalence constants
 PREVALENCE_TOTAL = 165
 PREVALENCE_DETECTED = 77
 PREVALENCE_GOOTLOADER = 66
@@ -84,117 +75,114 @@ PREVALENCE_ENTROPY = 7
 PREVALENCE_UNKNOWN_METHOD = 1
 PREVALENCE_MISMATCH = 1
 
-PRIMARY_BLUE = "#0D4EA6"
+# Color palette
+PRIMARY_BLUE   = "#0D4EA6"
 SECONDARY_BLUE = "#4A90D9"
-PRIMARY_RED = "#B22222"
-SUCCESS_GREEN = "#2D6A4F"
-AMBER = "#D4820A"
-LIGHT_GRAY = "#F5F5F5"
-MED_GRAY = "#CCCCCC"
-DARK_GRAY = "#444444"
-LIGHT_RED_BG = "#FFE8E8"
-LIGHT_BLUE_BG = "#E8F0FF"
+PRIMARY_RED    = "#B22222"
+SUCCESS_GREEN  = "#2D6A4F"
+AMBER          = "#D4820A"
+LIGHT_GRAY     = "#F5F5F5"
+MED_GRAY       = "#CCCCCC"
+DARK_GRAY      = "#444444"
+LIGHT_RED_BG   = "#FFE8E8"
+LIGHT_BLUE_BG  = "#E8F0FF"
 LIGHT_GREEN_BG = "#E8F5E9"
 LIGHT_AMBER_BG = "#FFF8E1"
 
+# Output directories
+PNG_DIR = "paper/figures/png"
+PDF_DIR = "paper/figures/pdf"
+CSV_DIR = "paper/figures/csv"
+
 
 def configure_style() -> None:
-    """Configure publication style and font embedding settings."""
+    """Configure publication-quality matplotlib style."""
     available_fonts = {f.name for f in fm.fontManager.ttflist}
-    selected_font = (
-        "Times New Roman" if "Times New Roman" in available_fonts
-        else "DejaVu Serif"
-    )
-
+    selected_font = "Times New Roman" if "Times New Roman" in available_fonts else "DejaVu Serif"
     plt.rcParams.update({
         "font.family": selected_font,
         "font.monospace": ["Courier New", "DejaVu Sans Mono", "monospace"],
         "font.size": 9,
-        "axes.titlesize": 10,
+        "axes.titlesize": 11,
         "axes.labelsize": 9,
         "xtick.labelsize": 8,
         "ytick.labelsize": 8,
         "legend.fontsize": 8,
         "figure.dpi": 600,
         "savefig.dpi": 600,
-        "pdf.fonttype": 42,
+        "pdf.fonttype": 42,   # embed fonts — required for IEEE/ACM submission
         "ps.fonttype": 42,
         "axes.spines.top": False,
         "axes.spines.right": False,
         "figure.constrained_layout.use": True,
     })
-    print(f"Using font family: {selected_font}")
+    print(f"Font: {selected_font}  |  DPI: 600  |  PDF fonttype: 42 (embedded)")
 
 
-def _save_png_pdf(fig: plt.Figure, output_dir: str, stem: str) -> tuple[str, str]:
-    """Save figure as both 600-DPI PNG and PDF."""
-    out_dir = Path(output_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    png_path = out_dir / f"{stem}.png"
-    pdf_path = out_dir / f"{stem}.pdf"
-    fig.savefig(png_path, dpi=600, bbox_inches="tight")
-    fig.savefig(pdf_path, bbox_inches="tight")
+def _save(fig: plt.Figure, stem: str) -> tuple[str, str]:
+    """Save figure to png/ and pdf/ subfolders at 600 DPI."""
+    Path(PNG_DIR).mkdir(parents=True, exist_ok=True)
+    Path(PDF_DIR).mkdir(parents=True, exist_ok=True)
+    png = str(Path(PNG_DIR) / f"{stem}.png")
+    pdf = str(Path(PDF_DIR) / f"{stem}.pdf")
+    fig.savefig(png, dpi=600, bbox_inches="tight")
+    fig.savefig(pdf, bbox_inches="tight")
     plt.close(fig)
-    return str(png_path), str(pdf_path)
+    print(f"  Saved: {png}")
+    print(f"  Saved: {pdf}")
+    return png, pdf
 
 
 def _apply_axes_style(ax: plt.Axes) -> None:
-    """Apply consistent axis and grid styling."""
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.grid(axis="y", alpha=0.35, linewidth=0.4, color=MED_GRAY)
 
 
 def _safe_float(val: Any) -> float:
-    """Convert value to float; return nan on failure."""
     try:
         if pd.isna(val):
             return np.nan
+    except Exception:
+        pass
+    try:
         return float(val)
     except Exception:
         return np.nan
 
 
 def _pick_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
-    """Pick the first existing column from a candidate list."""
     cols = set(df.columns)
-    for col in candidates:
-        if col in cols:
-            return col
+    for c in candidates:
+        if c in cols:
+            return c
     return None
 
 
-def _format_metric(val: Any, digits: int = 4) -> str:
-    """Format metric values consistently for table display."""
-    num = _safe_float(val)
-    if np.isnan(num):
-        return "-"
-    return f"{num:.{digits}f}"
+def _fmt(val: Any, digits: int = 4) -> str:
+    n = _safe_float(val)
+    return "-" if np.isnan(n) else f"{n:.{digits}f}"
 
 
-def _read_csv_or_none(path: str, label: str) -> pd.DataFrame | None:
-    """Read a CSV safely; print clear error and return None on failure."""
+def _read_csv(path: str, label: str) -> pd.DataFrame | None:
     try:
         df = pd.read_csv(path)
-        print(f"Loaded {label}: {path} (rows={len(df)})")
+        print(f"  Loaded {label}: {path} ({len(df)} rows)")
         return df
     except Exception as exc:
-        print(f"ERROR: Missing or unreadable {label} at {path}: {exc}")
-        print(f"Skipping outputs that depend on {label}.")
+        print(f"  MISSING {label}: {path} — {exc}")
         return None
 
 
-def _count_files(path: str) -> int | None:
-    """Count files in a directory recursively; return None if unavailable."""
+def _count_files(path: str) -> int:
     p = Path(path)
-    if not p.exists() or not p.is_dir():
-        return None
-    return sum(1 for child in p.rglob("*") if child.is_file())
+    if not p.exists():
+        return 0
+    return sum(1 for f in p.rglob("*") if f.is_file())
 
 
-def _extract_variant_count(generate_script_path: str) -> int | None:
-    """Best-effort extraction of variant count from generator script text."""
-    p = Path(generate_script_path)
+def _extract_variant_count(script_path: str) -> int | None:
+    p = Path(script_path)
     if not p.exists():
         return None
     text = p.read_text(encoding="utf-8", errors="ignore")
@@ -202,238 +190,75 @@ def _extract_variant_count(generate_script_path: str) -> int | None:
     if start == -1:
         return None
     end = text.find("]", start)
-    if end == -1:
-        return None
-    block = text[start:end]
-    return block.count("(")
+    return text[start:end].count("(") if end != -1 else None
 
 
-def _check_text_bbox_overlap(
-    fig: plt.Figure,
-    text_artists: list[Any],
-    label: str,
-) -> None:
-    """Check text bounding box intersections and print warnings."""
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-    overlaps = 0
+# ── Figure 1: ZIP Header Mismatch Diagram ────────────────────────────────────
 
-    for i in range(len(text_artists)):
-        for j in range(i + 1, len(text_artists)):
-            bb1 = text_artists[i].get_window_extent(renderer=renderer)
-            bb2 = text_artists[j].get_window_extent(renderer=renderer)
-            if bb1.overlaps(bb2):
-                overlaps += 1
-
-    if overlaps > 0:
-        print(
-            f"WARNING: {label} has {overlaps} overlapping text bounding boxes."
-        )
-    else:
-        print(f"OK: {label} text bounding boxes do not intersect.")
-
-
-def generate_fig1_zip_header(output_dir: str) -> tuple[str, str]:
-    """Generate byte-level ZIP header mismatch conceptual diagram."""
+def generate_fig1_zip_header() -> tuple[str, str]:
+    """Conceptual diagram showing LFH vs CDH byte-level mismatch."""
     fig, ax = plt.subplots(figsize=(7.0, 4.5), constrained_layout=True)
     ax.set_xlim(0, 14)
     ax.set_ylim(0, 10)
     ax.axis("off")
 
-    texts = []
-
-    def draw_box(
-        x: float,
-        y: float,
-        title: str,
-        subtitle: str,
-        facecolor: str,
-        min_w: float = 3.6,
-        h: float = 1.8,
-    ) -> tuple[float, float, float, float]:
-        wrapped_title = textwrap.fill(title, width=22)
-        wrapped_subtitle = textwrap.fill(subtitle, width=22)
-        longest = max(len(line) for line in wrapped_title.splitlines())
-        w = max(min_w, longest * 0.14)
-
-        patch = FancyBboxPatch(
-            (x, y),
-            w,
-            h,
-            boxstyle="round,pad=0.04",
-            linewidth=1.2,
-            edgecolor=DARK_GRAY,
-            facecolor=facecolor,
-        )
+    def draw_box(x, y, title, subtitle, facecolor, min_w=3.6, h=1.8):
+        w = max(min_w, max(len(l) for l in textwrap.fill(title, 22).splitlines()) * 0.14)
+        patch = FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.04",
+                               linewidth=1.2, edgecolor=DARK_GRAY, facecolor=facecolor)
         ax.add_patch(patch)
-
-        txt1 = ax.text(
-            x + w / 2,
-            y + h * 0.66,
-            wrapped_title,
-            ha="center",
-            va="center",
-            fontsize=9,
-            fontweight="bold",
-            color="white" if facecolor in {PRIMARY_BLUE, PRIMARY_RED, SUCCESS_GREEN}
-            else DARK_GRAY,
-            linespacing=1.4,
-        )
-        txt2 = ax.text(
-            x + w / 2,
-            y + h * 0.30,
-            wrapped_subtitle,
-            ha="center",
-            va="center",
-            fontsize=8,
-            style="italic",
-            color="white" if facecolor in {PRIMARY_BLUE, PRIMARY_RED, SUCCESS_GREEN}
-            else DARK_GRAY,
-            linespacing=1.4,
-        )
-        texts.extend([txt1, txt2])
+        white_fc = {PRIMARY_BLUE, PRIMARY_RED, SUCCESS_GREEN}
+        tc = "white" if facecolor in white_fc else DARK_GRAY
+        ax.text(x + w/2, y + h*0.66, textwrap.fill(title, 22),
+                ha="center", va="center", fontsize=9, fontweight="bold", color=tc, linespacing=1.4)
+        ax.text(x + w/2, y + h*0.30, textwrap.fill(subtitle, 22),
+                ha="center", va="center", fontsize=8, style="italic", color=tc, linespacing=1.4)
         return x, y, w, h
 
-    left_x = 0.9
-    right_x = 8.0
-    y_positions = [7.0, 4.7, 2.4]
+    lx, rx = 0.9, 8.0
+    ys = [7.0, 4.7, 2.4]
 
-    left_title = ax.text(
-        3.2,
-        9.3,
-        "Legitimate ZIP",
-        ha="center",
-        va="center",
-        fontsize=10,
-        fontweight="bold",
-        color=SUCCESS_GREEN,
-    )
-    right_title = ax.text(
-        10.4,
-        9.3,
-        "Zombie ZIP (CVE-2026-0866)",
-        ha="center",
-        va="center",
-        fontsize=10,
-        fontweight="bold",
-        color=PRIMARY_RED,
-    )
-    texts.extend([left_title, right_title])
+    ax.text(3.2, 9.3, "Legitimate ZIP", ha="center", fontsize=10, fontweight="bold", color=SUCCESS_GREEN)
+    ax.text(10.4, 9.3, "Zombie ZIP (CVE-2026-0866)", ha="center", fontsize=10, fontweight="bold", color=PRIMARY_RED)
 
     left_boxes = [
-        draw_box(
-            left_x,
-            y_positions[0],
-            "Local File Header",
-            "Compression method: 0x0008 (DEFLATE)",
-            SUCCESS_GREEN,
-        ),
-        draw_box(
-            left_x,
-            y_positions[1],
-            "Payload bytes",
-            "DEFLATE compressed, high entropy",
-            PRIMARY_BLUE,
-        ),
-        draw_box(
-            left_x,
-            y_positions[2],
-            "Central Directory Header",
-            "Compression method: 0x0008 (DEFLATE)",
-            SUCCESS_GREEN,
-        ),
+        draw_box(lx, ys[0], "Local File Header", "Compression method: 0x0008 (DEFLATE)", SUCCESS_GREEN),
+        draw_box(lx, ys[1], "Payload bytes", "DEFLATE compressed, high entropy", PRIMARY_BLUE),
+        draw_box(lx, ys[2], "Central Directory Header", "Compression method: 0x0008 (DEFLATE)", SUCCESS_GREEN),
     ]
-
     right_boxes = [
-        draw_box(
-            right_x,
-            y_positions[0],
-            "Local File Header (the lie)",
-            "Compression method: 0x0000 (STORE)",
-            PRIMARY_RED,
-        ),
-        draw_box(
-            right_x,
-            y_positions[1],
-            "Payload bytes",
-            "Actually DEFLATE compressed",
-            PRIMARY_BLUE,
-        ),
-        draw_box(
-            right_x,
-            y_positions[2],
-            "Central Directory Header (truth)",
-            "Compression method: 0x0008 (DEFLATE)",
-            AMBER,
-        ),
+        draw_box(rx, ys[0], "Local File Header (the lie)", "Compression method: 0x0000 (STORE)", PRIMARY_RED),
+        draw_box(rx, ys[1], "Payload bytes", "Actually DEFLATE compressed", PRIMARY_BLUE),
+        draw_box(rx, ys[2], "Central Directory Header (truth)", "Compression method: 0x0008 (DEFLATE)", AMBER),
     ]
 
     for group in [left_boxes, right_boxes]:
-        for idx in range(2):
-            x, y, w, h = group[idx]
-            nx, ny, nw, _ = group[idx + 1]
-            ax.annotate(
-                "",
-                xy=(nx + nw / 2, ny + 1.8),
-                xytext=(x + w / 2, y),
-                arrowprops=dict(arrowstyle="->", lw=1.2, color=DARK_GRAY),
-            )
+        for i in range(2):
+            x, y, w, _ = group[i]
+            nx, ny, nw, _ = group[i + 1]
+            ax.annotate("", xy=(nx + nw/2, ny + 1.8), xytext=(x + w/2, y),
+                        arrowprops=dict(arrowstyle="->", lw=1.2, color=DARK_GRAY))
 
     ax.axvline(7.0, linestyle="--", linewidth=1.0, color=MED_GRAY)
+    ax.text(rx + 2.15, ys[0] - 0.35, "Bytes 8-9", fontsize=7.8, color=DARK_GRAY,
+            ha="center", va="center",
+            bbox=dict(boxstyle="round,pad=0.55", facecolor="#FFFDE7", edgecolor=AMBER, linewidth=1.0))
+    ax.text(3.2, 1.1, "LFH method = CDH method  \u2192 parser-consistent",
+            ha="center", fontsize=8, color=SUCCESS_GREEN, style="italic")
+    ax.text(10.4, 1.1, "LFH method \u2260 CDH method  \u2192 scanner reads wrong bytes",
+            ha="center", fontsize=8, color=PRIMARY_RED, style="italic")
 
-    callout = ax.text(
-        right_x + 2.15,
-        y_positions[0] - 0.35,
-        "Bytes 8-9",
-        fontsize=7.8,
-        color=DARK_GRAY,
-        ha="center",
-        va="center",
-        bbox=dict(
-            boxstyle="round,pad=0.55",
-            facecolor="#FFFDE7",
-            edgecolor=AMBER,
-            linewidth=1.0,
-        ),
-    )
-    texts.append(callout)
-
-    s_left = ax.text(
-        3.2,
-        1.1,
-        "LFH method = CDH method  -> parser-consistent",
-        ha="center",
-        va="center",
-        fontsize=8,
-        color=SUCCESS_GREEN,
-        style="italic",
-    )
-    s_right = ax.text(
-        10.4,
-        1.1,
-        "LFH method != CDH method  -> scanner reads wrong bytes",
-        ha="center",
-        va="center",
-        fontsize=8,
-        color=PRIMARY_RED,
-        style="italic",
-    )
-    texts.extend([s_left, s_right])
-
-    _check_text_bbox_overlap(fig, texts, "Figure 1")
-
-    return _save_png_pdf(fig, output_dir, "fig1_zip_header_mismatch")
+    return _save(fig, "fig1_zip_header_mismatch")
 
 
-def generate_fig2_taxonomy(
-    output_dir: str,
-    expected_variant_count: int | None,
-) -> tuple[str, str]:
-    """Generate taxonomy table for archive evasion variants."""
+# ── Figure 2: Attack Taxonomy Table ──────────────────────────────────────────
+
+def generate_fig2_taxonomy(expected_variant_count: int | None) -> tuple[str, str]:
+    """Attack variant taxonomy — publication table figure."""
     variants = [
         ["A", "Classic Zombie ZIP", "STORE (0)", "DEFLATE (8)", "Compressed", "method_mismatch"],
         ["B", "Method-only mismatch", "DEFLATE (8)", "STORE (0)", "Stored", "method_mismatch"],
-        ["C", "Gootloader concatenation (real-world dominant)", "DEFLATE (8)", "DEFLATE (8)", "Compressed", "eocd_count > 1"],
+        ["C", "Gootloader concatenation\n(real-world dominant)", "DEFLATE (8)", "DEFLATE (8)", "Compressed", "eocd_count > 1"],
         ["D", "Multi-file decoy", "STORE (0)", "DEFLATE (8)", "Compressed", "suspicious_entry_ratio"],
         ["E", "CRC32 mismatch", "DEFLATE (8)", "DEFLATE (8)", "Compressed", "any_crc_mismatch"],
         ["F", "Extra field noise", "STORE (0)", "DEFLATE (8)", "Compressed", "structural_combo"],
@@ -443,10 +268,7 @@ def generate_fig2_taxonomy(
     ]
 
     if expected_variant_count is not None and expected_variant_count != len(variants):
-        print(
-            "WARNING: Taxonomy row count does not match VARIANTS in "
-            f"generate_zombie_samples.py ({len(variants)} vs {expected_variant_count})."
-        )
+        print(f"  WARNING: Taxonomy row count mismatch ({len(variants)} vs {expected_variant_count} in script)")
 
     cols = ["ID", "Variant Name", "LFH Method", "CDH Method", "Payload", "Primary Signal"]
     col_widths = [0.06, 0.34, 0.12, 0.12, 0.12, 0.24]
@@ -454,44 +276,28 @@ def generate_fig2_taxonomy(
     fig, ax = plt.subplots(figsize=(7.0, 4.2), constrained_layout=False)
     ax.axis("off")
 
-    table = ax.table(
-        cellText=variants,
-        colLabels=cols,
-        colWidths=col_widths,
-        cellLoc="center",
-        bbox=[0.0, 0.08, 1.0, 0.90],
-    )
+    table = ax.table(cellText=variants, colLabels=cols, colWidths=col_widths,
+                     cellLoc="center", bbox=[0.0, 0.08, 1.0, 0.90])
     table.auto_set_font_size(False)
     table.set_fontsize(8.5)
 
     for (row, col), cell in table.get_celld().items():
         cell.set_edgecolor(MED_GRAY)
         cell.set_linewidth(0.5)
-
         if row == 0:
             cell.set_facecolor(PRIMARY_BLUE)
             cell.set_text_props(color="white", fontweight="bold", fontsize=9)
             cell.set_height(0.15)
             continue
-
         text = str(cell.get_text().get_text())
         if col == 1:
-            text = textwrap.fill(text, width=38)
-            cell.get_text().set_text(text)
+            cell.get_text().set_text(textwrap.fill(text, 38))
         elif col == 5:
-            text = textwrap.fill(text, width=24)
-            cell.get_text().set_text(text)
-        line_count = max(1, len(textwrap.wrap(text, width=26)))
-        row_h = max(0.13, 0.09 + line_count * 0.03)
-        cell.set_height(row_h)
-
+            cell.get_text().set_text(textwrap.fill(text, 24))
+        line_count = max(1, len(textwrap.wrap(text, 26)))
+        cell.set_height(max(0.13, 0.09 + line_count * 0.03))
         if col in {2, 3}:
-            if "STORE" in text:
-                cell.set_facecolor(LIGHT_RED_BG)
-            elif "DEFLATE" in text:
-                cell.set_facecolor(LIGHT_BLUE_BG)
-            else:
-                cell.set_facecolor("white")
+            cell.set_facecolor(LIGHT_RED_BG if "STORE" in text else LIGHT_BLUE_BG if "DEFLATE" in text else "white")
         elif col == 5:
             cell.set_facecolor(LIGHT_GRAY)
             cell.set_text_props(fontfamily="monospace")
@@ -499,146 +305,75 @@ def generate_fig2_taxonomy(
             cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
 
     fig.subplots_adjust(left=0.03, right=0.97, top=0.98, bottom=0.10)
+    fig.text(0.02, 0.005, "* Single wild sample — future corpus required for trained detection",
+             fontsize=8, style="italic", color="gray", ha="left", va="bottom")
 
-    fig.text(
-        0.02,
-        0.005,
-        "* Single wild sample - future corpus required for trained detection",
-        fontsize=8,
-        style="italic",
-        color="gray",
-        ha="left",
-        va="bottom",
-    )
-
-    return _save_png_pdf(fig, output_dir, "fig2_attack_taxonomy")
+    return _save(fig, "fig2_attack_taxonomy")
 
 
-def generate_fig3_shap(
-    shap_values: np.ndarray,
-    feature_names: list[str],
-    mean_shap: np.ndarray,
-    output_dir: str,
-) -> tuple[str, str]:
-    """Generate SHAP mean-absolute feature importance chart."""
-    if shap_values is None or mean_shap is None or len(feature_names) == 0:
-        raise ValueError("Missing SHAP arrays or feature names.")
+# ── Figure 3: SHAP Feature Importance ────────────────────────────────────────
 
-    included_mask = mean_shap > 0.001
-    omitted = int((~included_mask).sum())
-
-    filt_names = np.array(feature_names)[included_mask]
-    filt_vals = np.array(mean_shap)[included_mask]
-    if len(filt_vals) == 0:
+def generate_fig3_shap(shap_values: np.ndarray, feature_names: list[str],
+                       mean_shap: np.ndarray) -> tuple[str, str]:
+    """SHAP mean-absolute feature importance horizontal bar chart."""
+    mask = mean_shap > 0.001
+    omitted = int((~mask).sum())
+    names = np.array(feature_names)[mask]
+    vals = np.array(mean_shap)[mask]
+    if len(vals) == 0:
         raise ValueError("No SHAP values above 0.001 threshold.")
 
-    order = np.argsort(filt_vals)[::-1]
-    names_sorted = filt_names[order]
-    vals_sorted = filt_vals[order]
-
-    colors = []
-    for val in vals_sorted:
-        if val > 2.0:
-            colors.append(PRIMARY_BLUE)
-        elif val >= 0.5:
-            colors.append(SECONDARY_BLUE)
-        else:
-            colors.append(MED_GRAY)
+    order = np.argsort(vals)[::-1]
+    names, vals = names[order], vals[order]
+    colors = [PRIMARY_BLUE if v > 2.0 else SECONDARY_BLUE if v >= 0.5 else MED_GRAY for v in vals]
 
     fig, ax = plt.subplots(figsize=(3.6, 4.5), constrained_layout=False)
-    bars = ax.barh(range(len(vals_sorted)), vals_sorted, color=colors, edgecolor="white")
-    ax.set_yticks(range(len(vals_sorted)))
-    ax.set_yticklabels(names_sorted, fontsize=8)
+    bars = ax.barh(range(len(vals)), vals, color=colors, edgecolor="white")
+    ax.set_yticks(range(len(vals)))
+    ax.set_yticklabels(names, fontsize=8)
     ax.invert_yaxis()
     ax.set_xlabel("Mean |SHAP value|", fontsize=9, labelpad=8)
-    ax.set_title("")
-
     ax.axvline(0.5, linestyle="--", linewidth=1.0, color=PRIMARY_RED)
-    xmax = float(max(vals_sorted.max() * 1.25, 0.8))
-    ax.set_xlim(0.0, xmax)
-    ax.text(
-        0.5 + 0.02,
-        0.03,
-        "0.5",
-        color=PRIMARY_RED,
-        fontsize=8,
-        transform=ax.get_xaxis_transform(),
-    )
-
+    ax.set_xlim(0.0, max(float(vals.max()) * 1.25, 0.8))
+    ax.text(0.52, 0.03, "0.5", color=PRIMARY_RED, fontsize=8, transform=ax.get_xaxis_transform())
     _apply_axes_style(ax)
-    ax.bar_label(bars, labels=[f"{v:.4f}" for v in vals_sorted], fontsize=7.5, padding=3, color=DARK_GRAY)
-
+    ax.bar_label(bars, labels=[f"{v:.4f}" for v in vals], fontsize=7.5, padding=3, color=DARK_GRAY)
     fig.subplots_adjust(left=0.28, right=0.97, top=0.98, bottom=0.15)
+    fig.text(0.5, 0.015, f"Features with SHAP=0 omitted (n={omitted})",
+             ha="center", va="bottom", fontsize=8, color=DARK_GRAY)
 
-    fig.text(
-        0.5,
-        0.015,
-        f"Features with SHAP=0 omitted (n={omitted} features)",
-        ha="center",
-        va="bottom",
-        fontsize=8,
-        color=DARK_GRAY,
-    )
-
-    return _save_png_pdf(fig, output_dir, "fig3_shap_importance")
+    return _save(fig, "fig3_shap_importance")
 
 
-def generate_fig4_generalisation(
-    generalisation_df: pd.DataFrame,
-    output_dir: str,
-) -> tuple[str, str]:
-    """Generate cross-format generalisation chart using CSV values."""
-    if generalisation_df is None or generalisation_df.empty:
-        raise ValueError("generalisation_df is empty.")
+# ── Figure 4: Cross-Format Generalisation ────────────────────────────────────
 
-    fmt_col = _pick_col(generalisation_df, ["format", "Format"])
-    model_col = _pick_col(generalisation_df, ["model", "Model"])
+def generate_fig4_generalisation(generalisation_df: pd.DataFrame) -> tuple[str, str]:
+    """Recall and AUC bar chart across archive formats."""
+    fmt_col    = _pick_col(generalisation_df, ["format", "Format"])
+    model_col  = _pick_col(generalisation_df, ["model", "Model"])
     recall_col = _pick_col(generalisation_df, ["recall", "Recall"])
-    auc_col = _pick_col(generalisation_df, ["roc_auc", "roc-auc", "ROC_AUC", "auc"])
+    auc_col    = _pick_col(generalisation_df, ["roc_auc", "roc-auc", "ROC_AUC", "auc"])
     if None in {fmt_col, model_col, recall_col, auc_col}:
         raise ValueError("generalisation_results.csv missing required columns.")
 
-    df = generalisation_df.copy()
-    df = df[df[model_col].astype(str).str.contains("XGBoost", case=False, na=False)]
-
+    df = generalisation_df[generalisation_df[model_col].str.contains("XGBoost", case=False, na=False)].copy()
     fmt_order = ["ZIP", "APK", "RAR", "7z"]
     rows = []
     for fmt in fmt_order:
-        match = df[df[fmt_col].astype(str).str.strip().str.upper() == fmt.upper()]
+        match = df[df[fmt_col].str.strip().str.upper() == fmt.upper()]
         if len(match) == 0:
             raise ValueError(f"Missing XGBoost row for format: {fmt}")
         rows.append(match.iloc[0])
-
     chart_df = pd.DataFrame(rows)
-    chart_df[recall_col] = chart_df[recall_col].astype(float)
-    chart_df[auc_col] = chart_df[auc_col].astype(float)
 
     xlabels = ["ZIP", "APK", "RAR*", "7z*"]
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 3.5), sharey=True, constrained_layout=False)
 
-    fig, axes = plt.subplots(
-        1,
-        2,
-        figsize=(7.0, 3.5),
-        sharey=True,
-        constrained_layout=False,
-    )
-
-    for ax, metric_col, title in [
-        (axes[0], recall_col, "Recall by Archive Format"),
-        (axes[1], auc_col, "ROC-AUC by Archive Format"),
-    ]:
-        vals = chart_df[metric_col].astype(float).to_numpy()
-        colors = []
-        for val in vals:
-            if val >= 0.99:
-                colors.append(SUCCESS_GREEN)
-            elif val >= 0.70:
-                colors.append(PRIMARY_BLUE)
-            elif val >= 0.50:
-                colors.append(AMBER)
-            else:
-                colors.append(PRIMARY_RED)
-
+    for ax, col, title in [(axes[0], recall_col, "Recall by Archive Format"),
+                           (axes[1], auc_col,    "ROC-AUC by Archive Format")]:
+        vals = chart_df[col].astype(float).to_numpy()
+        colors = [SUCCESS_GREEN if v >= 0.99 else PRIMARY_BLUE if v >= 0.70
+                  else AMBER if v >= 0.50 else PRIMARY_RED for v in vals]
         bars = ax.bar(xlabels, vals, color=colors, edgecolor="white", linewidth=0.8)
         ax.set_ylim(0.0, 1.15)
         ax.set_ylabel("Score", fontsize=9)
@@ -648,175 +383,148 @@ def generate_fig4_generalisation(
         ax.bar_label(bars, fmt="%.4f", fontsize=7.5, padding=3, color=DARK_GRAY)
 
     fig.subplots_adjust(left=0.06, right=0.98, top=0.90, bottom=0.20, wspace=0.10)
+    fig.text(0.5, 0.035,
+             "* Low recall due to threshold miscalibration under distribution shift; AUC confirms signal transfer",
+             ha="center", va="bottom", fontsize=7, color=DARK_GRAY)
 
-    fig.text(
-        0.5,
-        0.035,
-        "* Low recall due to threshold miscalibration under distribution shift; "
-        "AUC confirms signal transfer",
-        ha="center",
-        va="bottom",
-        fontsize=7,
-        color=DARK_GRAY,
-    )
-
-    return _save_png_pdf(fig, output_dir, "fig4_generalisation_chart")
+    return _save(fig, "fig4_generalisation_chart")
 
 
-def generate_table1_baseline(
-    baseline_df: pd.DataFrame,
-    output_dir: str,
-) -> tuple[str, str]:
-    """Generate baseline-vs-ML comparison table figure from CSV."""
-    if baseline_df is None or baseline_df.empty:
-        raise ValueError("baseline_df is empty.")
+# ── Figure 5: Multi-Model Baseline Comparison ─────────────────────────────────
 
-    cols_present = [
-        c for c in ["model", "accuracy", "precision", "recall", "f1", "roc_auc", "TP", "FP", "TN", "FN"]
-        if c in baseline_df.columns
-    ]
-    if not cols_present:
-        raise ValueError("No expected baseline columns found.")
+def generate_fig5_multi_baseline(baseline_df: pd.DataFrame) -> tuple[str, str]:
+    """Grouped bar chart: Recall and AUC across 5 classifiers (Experiment 1)."""
+    models      = baseline_df["model"].tolist()
+    recall_vals = baseline_df["recall"].astype(float).tolist()
+    auc_vals    = baseline_df["roc_auc"].astype(float).tolist()
+    x = np.arange(len(models))
 
-    display_df = baseline_df[cols_present].copy()
-    for c in ["accuracy", "precision", "recall", "f1", "roc_auc"]:
-        if c in display_df.columns:
-            display_df[c] = display_df[c].map(lambda x: _format_metric(x, digits=4))
+    fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.8), constrained_layout=False)
 
-    n_data_rows = len(display_df)
-    n_rows_including_header = n_data_rows + 1
-    fig_height = max(1.7, n_rows_including_header * 0.22 + 0.25)
+    for ax, vals, title, ylabel in [
+        (axes[0], recall_vals, "Recall (Malicious Detection Rate)", "Recall"),
+        (axes[1], auc_vals,    "ROC-AUC",                          "ROC-AUC"),
+    ]:
+        colors = [SUCCESS_GREEN if m == "XGBoost" else SECONDARY_BLUE for m in models]
+        bars = ax.bar(x, vals, color=colors, edgecolor="white", linewidth=0.8)
+        ax.set_xticks(x)
+        ax.set_xticklabels(models, rotation=18, ha="right", fontsize=8)
+        ax.set_ylim(0.0, 1.12)
+        ax.set_ylabel(ylabel, fontsize=9)
+        ax.set_title(title, fontsize=10)
+        _apply_axes_style(ax)
+        ax.bar_label(bars, fmt="%.4f", fontsize=7.5, padding=3, color=DARK_GRAY)
+        ax.axhline(y=0.99, linestyle="--", linewidth=0.8, color=PRIMARY_RED, alpha=0.5)
 
-    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=False)
-    ax.axis("off")
+    fig.suptitle("Figure 5 — Multi-Model Comparison: Recall and ROC-AUC (Hard Test Set)",
+                 fontsize=11, fontweight="bold", y=1.01)
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.90, bottom=0.22, wspace=0.28)
 
-    table = ax.table(
-        cellText=display_df.values,
-        colLabels=display_df.columns,
-        colWidths=[0.18, 0.11, 0.11, 0.11, 0.10, 0.10, 0.07, 0.07, 0.07, 0.08],
-        loc="center",
-        cellLoc="center",
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(9)
-
-    for (row, col), cell in table.get_celld().items():
-        cell.set_edgecolor(MED_GRAY)
-        cell.set_linewidth(0.5)
-        if row == 0:
-            cell.set_facecolor(PRIMARY_BLUE)
-            cell.set_text_props(color="white", fontweight="bold", fontsize=9)
-            cell.set_height(0.24)
-        else:
-            cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
-            cell.set_height(0.20)
-
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.97, bottom=0.08)
-
-    return _save_png_pdf(fig, output_dir, "table1_baseline_comparison")
+    return _save(fig, "fig5_multi_baseline_chart")
 
 
-def generate_table2_dataset(
-    features_df: pd.DataFrame,
-    labels_df: pd.DataFrame,
-    output_dir: str,
-) -> tuple[str, str]:
-    """Generate dataset statistics table using directory and label counts."""
-    if labels_df is None or labels_df.empty:
-        raise ValueError("labels_df is empty.")
+# ── Figure 6: Per-Variant Recall ──────────────────────────────────────────────
 
-    malicious_count = int((labels_df["label"] == 1).sum())
-    benign_count = int((labels_df["label"] == 0).sum())
-    total_count = int(len(labels_df))
-    real_world = _count_files("data/real_world_validation")
-    real_world_count = real_world if real_world is not None else 0
+def generate_fig6_variant_recall(variant_df: pd.DataFrame) -> tuple[str, str]:
+    """Horizontal bar chart of recall per attack variant (Experiment 2)."""
+    plot_df = variant_df[variant_df["recall"].notna() & (variant_df["n_test"] > 0)].copy()
+    labels  = [f"{r['variant']} \u2014 {r['name']}" for _, r in plot_df.iterrows()]
+    recalls = plot_df["recall"].tolist()
+    colors  = [SUCCESS_GREEN if r >= 1.0 else AMBER if r >= 0.90 else PRIMARY_RED for r in recalls]
 
-    rows = [
-        ["Processed malicious samples", malicious_count, "from labels.csv where label=1"],
-        ["Processed benign samples", benign_count, "from labels.csv where label=0"],
-        ["Total processed samples", total_count, "exact len(labels.csv)"],
-        ["Real-world validation files", real_world_count, "from data/real_world_validation (if available)"],
-        ["Feature rows", len(features_df), "exact len(features.csv)"],
-        ["Label rows", len(labels_df), "exact len(labels.csv)"],
-    ]
+    fig, ax = plt.subplots(figsize=(7.0, max(3.5, len(labels) * 0.42)), constrained_layout=False)
+    y = np.arange(len(labels))
+    bars = ax.barh(y, recalls, color=colors, edgecolor="white", linewidth=0.7)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=8.5)
+    ax.invert_yaxis()
+    ax.set_xlim(0.0, 1.12)
+    ax.set_xlabel("Recall", fontsize=9)
+    ax.set_title("Figure 6 — Per-Variant Recall (XGBoost, full malicious corpus)",
+                 fontsize=11, fontweight="bold")
+    ax.axvline(x=1.0, linestyle="--", linewidth=0.9, color=MED_GRAY)
+    ax.axvline(x=0.90, linestyle=":", linewidth=0.8, color=AMBER, alpha=0.7)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.grid(axis="x", alpha=0.3, linewidth=0.4, color=MED_GRAY)
+    ax.bar_label(bars, fmt="%.4f", fontsize=8, padding=4, color=DARK_GRAY)
+    fig.subplots_adjust(left=0.32, right=0.97, top=0.92, bottom=0.10)
 
-    cols = ["Component", "Count", "Derivation"]
-
-    n_rows = 7
-    fig_height = n_rows * 0.13 + 0.20 + 0.30
-
-    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=False)
-    ax.axis("off")
-
-    table = ax.table(
-        cellText=rows,
-        colLabels=cols,
-        colWidths=[0.45, 0.15, 0.40],
-        cellLoc="center",
-        loc="center",
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(8.3)
-
-    for (row, col), cell in table.get_celld().items():
-        cell.set_edgecolor(MED_GRAY)
-        cell.set_linewidth(0.5)
-        if row == 0:
-            cell.set_facecolor(PRIMARY_BLUE)
-            cell.set_text_props(color="white", fontweight="bold", fontsize=9)
-            cell.set_height(0.15)
-        else:
-            cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
-            cell.set_height(0.13)
-
-    return _save_png_pdf(fig, output_dir, "table2_dataset_statistics")
+    return _save(fig, "fig6_variant_recall_chart")
 
 
-def generate_table3_prevalence(
-    realworld_df: pd.DataFrame | None,
-    output_dir: str,
-) -> tuple[str, str]:
-    """Generate prevalence breakdown table using real-world labels if present."""
+# ── Figure 7: Temporal Stability ──────────────────────────────────────────────
+
+def generate_fig7_temporal_stability(temporal_df: pd.DataFrame) -> tuple[str, str]:
+    """Line chart: Recall/F1/AUC across temporal windows T1/T2/T3 (Experiment 3)."""
+    import matplotlib.ticker as mticker
+
+    synth_rows = temporal_df[temporal_df["window"].str.startswith("Synth")]
+    temp_rows  = temporal_df[~temporal_df["window"].str.startswith("Synth")]
+
+    windows = temp_rows["window"].tolist()
+    x = np.arange(len(windows))
+
+    fig, ax = plt.subplots(figsize=(7.0, 4.5), constrained_layout=False)
+
+    for metric, color, marker, label in [
+        ("recall", "#e74c3c", "o", "Temporal-trained Recall"),
+        ("f1",     "#3498db", "s", "Temporal-trained F1"),
+        ("auc",    "#2ecc71", "^", "Temporal-trained AUC"),
+    ]:
+        vals = temp_rows[metric].astype(float).tolist()
+        ax.plot(x, vals, color=color, marker=marker, linewidth=2, markersize=8, label=label)
+        for xi, v in zip(x, vals):
+            ax.annotate(f"{v:.4f}", (xi, v), textcoords="offset points",
+                        xytext=(0, 8), ha="center", fontsize=7.5, color=color)
+
+    if not synth_rows.empty:
+        synth_map = dict(zip(synth_rows["window"].str.replace("Synth\u2192", "").tolist(),
+                             synth_rows["recall"].astype(float).tolist()))
+        sx = [i for i, w in enumerate(windows) if w in synth_map]
+        sy = [synth_map[w] for w in windows if w in synth_map]
+        if sx:
+            ax.plot(sx, sy, color="#e67e22", marker="D", linewidth=2, markersize=8,
+                    linestyle="--", label="Synthetic-trained Recall (zero-shot)")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(windows, fontsize=10)
+    ax.set_ylim(0, 1.12)
+    ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
+    ax.set_ylabel("Score", fontsize=10)
+    ax.set_xlabel("Temporal Window", fontsize=10)
+    ax.set_title("Figure 7 — Temporal Stability: Recall / F1 / AUC Across Time Windows",
+                 fontsize=11, fontweight="bold")
+    ax.legend(fontsize=8, loc="lower left")
+    ax.grid(axis="y", alpha=0.3)
+    fig.subplots_adjust(left=0.10, right=0.97, top=0.92, bottom=0.12)
+
+    return _save(fig, "fig7_temporal_stability_chart")
+
+
+# ── Prevalence tables (figures only — no CSV, data is hardcoded/realworld) ───
+
+def generate_table3_prevalence(realworld_df: pd.DataFrame | None) -> tuple[str, str]:
+    """Prevalence breakdown figure — general scan."""
     used_fallback = False
-
-    if realworld_df is not None and not realworld_df.empty:
-        if "label" not in realworld_df.columns:
-            raise ValueError("realworld_df missing label column.")
-
+    if realworld_df is not None and not realworld_df.empty and "label" in realworld_df.columns:
         signal_col = _pick_col(realworld_df, ["signal", "Signal"])
-        total = int(len(realworld_df))
+        total    = int(len(realworld_df))
         detected = int((realworld_df["label"] == 1).sum())
-
-        if signal_col is not None:
-            positives = realworld_df[realworld_df["label"] == 1]
-            by_signal = positives.groupby(signal_col).size().to_dict()
-        else:
-            by_signal = {}
-
-        goot_count = int(by_signal.get("gootloader", 0))
+        by_signal = realworld_df[realworld_df["label"] == 1].groupby(signal_col).size().to_dict() if signal_col else {}
+        goot_count    = int(by_signal.get("gootloader", 0))
         entropy_count = int(by_signal.get("entropy", 0))
         unknown_count = int(by_signal.get("unknown_method", 0))
         mismatch_count = int(by_signal.get("mismatch", 0))
     else:
         used_fallback = True
-        total = PREVALENCE_TOTAL
-        detected = PREVALENCE_DETECTED
-        goot_count = PREVALENCE_GOOTLOADER
-        entropy_count = PREVALENCE_ENTROPY
-        unknown_count = PREVALENCE_UNKNOWN_METHOD
-        mismatch_count = PREVALENCE_MISMATCH
-        print(
-            "WARNING: Using hardcoded prevalence values - run "
-            "verify_realworld.py to regenerate from data"
-        )
+        total, detected = PREVALENCE_TOTAL, PREVALENCE_DETECTED
+        goot_count, entropy_count = PREVALENCE_GOOTLOADER, PREVALENCE_ENTROPY
+        unknown_count, mismatch_count = PREVALENCE_UNKNOWN_METHOD, PREVALENCE_MISMATCH
+        print("  WARNING: Using hardcoded prevalence values (realworld_labels.csv not found)")
 
-    non_evasion = int(total - detected)
-
-    def pct(val: int, denom: int) -> str:
-        if denom <= 0:
-            return "0.0%"
-        return f"{(100.0 * val / denom):.1f}%"
-
+    def pct(v, d): return f"{100.0*v/d:.1f}%" if d > 0 else "0.0%"
+    non_evasion = total - detected
     rows = [
         ["Gootloader EOCD chaining (EOCD > 1)", goot_count, pct(goot_count, total), "eocd_count"],
         ["High entropy anomaly", entropy_count, pct(entropy_count, total), "data_entropy_shannon"],
@@ -825,30 +533,15 @@ def generate_table3_prevalence(
         ["Total detected evasion", detected, pct(detected, total), "label==1"],
         ["Non-evasion / out-of-scope", non_evasion, pct(non_evasion, total), "label==0"],
     ]
-
     cols = ["Signal Type", "Count", "Share", "Feature"]
 
-    n_data_rows = len(rows)
-    fig_height = (n_data_rows + 1) * 0.13 + 0.20 + 0.10
-
-    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=False)
+    fig, ax = plt.subplots(figsize=(7.0, (len(rows)+1)*0.13+0.50), constrained_layout=False)
     ax.axis("off")
-
-    table = ax.table(
-        cellText=rows,
-        colLabels=cols,
-        colWidths=[0.48, 0.10, 0.15, 0.27],
-        cellLoc="center",
-        loc="center",
-    )
-
-    ax.set_title(
-        "General scan: 1,366 samples across 18 malware families",
-        fontsize=11,
-        pad=12,
-    )
+    table = ax.table(cellText=rows, colLabels=cols, colWidths=[0.48, 0.10, 0.15, 0.27],
+                     cellLoc="center", loc="center")
     table.auto_set_font_size(False)
     table.set_fontsize(8.5)
+    ax.set_title("General scan: 1,366 samples across 18 malware families", fontsize=11, pad=12)
 
     for (row, col), cell in table.get_celld().items():
         cell.set_edgecolor(MED_GRAY)
@@ -858,38 +551,20 @@ def generate_table3_prevalence(
             cell.set_text_props(color="white", fontweight="bold", fontsize=9)
             cell.set_height(0.15)
         else:
-            if row == 5:
-                cell.set_facecolor(LIGHT_GREEN_BG)
-            elif row == 6:
-                cell.set_facecolor(LIGHT_AMBER_BG)
-            else:
-                cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
-            text = str(cell.get_text().get_text())
-            wrapped = textwrap.wrap(text, width=40 if col == 0 else 24)
-            line_count = max(1, len(wrapped))
-            cell.set_height(max(0.12, 0.09 + line_count * 0.03))
+            cell.set_facecolor(LIGHT_GREEN_BG if row == 5 else LIGHT_AMBER_BG if row == 6
+                               else "white" if row % 2 else LIGHT_GRAY)
+            cell.set_height(0.13)
 
     fig.subplots_adjust(left=0.02, right=0.98, top=0.86, bottom=0.08)
-
     if used_fallback:
-        fig.text(
-            0.5,
-            0.01,
-            "Fallback prevalence constants used due to missing realworld_labels.csv",
-            ha="center",
-            va="bottom",
-            fontsize=8,
-            color=PRIMARY_RED,
-        )
+        fig.text(0.5, 0.01, "Fallback constants used — run verify_realworld.py to regenerate",
+                 ha="center", fontsize=8, color=PRIMARY_RED)
 
-    return _save_png_pdf(fig, output_dir, "table3_prevalence_breakdown")
+    return _save(fig, "table3_prevalence_breakdown")
 
 
-def generate_targeted_prevalence(output_dir: str) -> tuple[str, str]:
-    """Generate targeted-scan prevalence figure for the 165-sample study."""
-    fig, ax = plt.subplots(figsize=(7.0, 4.0), constrained_layout=False)
-    ax.axis("off")
-
+def generate_table3a_targeted_prevalence() -> tuple[str, str]:
+    """Targeted-scan prevalence figure (165 Gootloader samples)."""
     data = [
         ["Signal Type", "Count", "Share of 165", "Feature"],
         ["Gootloader EOCD chaining\n(EOCD > 1)", "66", "40.0%", "eocd_count"],
@@ -899,18 +574,14 @@ def generate_targeted_prevalence(output_dir: str) -> tuple[str, str]:
         ["Total evasion detected", "77", "46.7%", "---"],
         ["Non-evasion (out of scope)", "88", "53.3%", "---"],
     ]
-
-    table = ax.table(
-        cellText=data[1:],
-        colLabels=data[0],
-        colWidths=[0.34, 0.14, 0.18, 0.24],
-        bbox=[0.0, 0.0, 1.0, 0.78],
-        cellLoc="center",
-    )
+    fig, ax = plt.subplots(figsize=(7.0, 4.0), constrained_layout=False)
+    ax.axis("off")
+    table = ax.table(cellText=data[1:], colLabels=data[0],
+                     colWidths=[0.34, 0.14, 0.18, 0.24],
+                     bbox=[0.0, 0.0, 1.0, 0.78], cellLoc="center")
     table.auto_set_font_size(False)
     table.set_fontsize(8.8)
     table.scale(1.0, 1.25)
-
     for (row, col), cell in table.get_celld().items():
         cell.set_edgecolor(DARK_GRAY)
         cell.set_linewidth(1.0)
@@ -918,348 +589,204 @@ def generate_targeted_prevalence(output_dir: str) -> tuple[str, str]:
             cell.set_facecolor(PRIMARY_BLUE)
             cell.set_text_props(color="white", fontweight="bold", fontsize=9)
         else:
-            if row == 5:
-                cell.set_facecolor(LIGHT_GREEN_BG)
-            elif row == 6:
-                cell.set_facecolor(LIGHT_AMBER_BG)
-            else:
-                cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
-
-    ax.set_title(
-        "Targeted scan: 165 Gootloader-associated samples",
-        fontsize=11,
-        pad=8,
-        fontweight="bold",
-    )
-
+            cell.set_facecolor(LIGHT_GREEN_BG if row == 5 else LIGHT_AMBER_BG if row == 6
+                               else "white" if row % 2 else LIGHT_GRAY)
+    ax.set_title("Targeted scan: 165 Gootloader-associated samples",
+                 fontsize=11, pad=8, fontweight="bold")
     fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.05)
 
-    return _save_png_pdf(fig, output_dir, "table3a_targeted_prevalence")
+    return _save(fig, "table3a_targeted_prevalence")
 
 
-def generate_table4_generalisation(
-    generalisation_df: pd.DataFrame,
-    output_dir: str,
-) -> tuple[str, str]:
-    """Generate generalisation results table from CSV rows."""
-    if generalisation_df is None or generalisation_df.empty:
-        raise ValueError("generalisation_df is empty.")
+# ── Verify outputs ────────────────────────────────────────────────────────────
 
-    fmt_col = _pick_col(generalisation_df, ["format", "Format"])
-    model_col = _pick_col(generalisation_df, ["model", "Model"])
-    recall_col = _pick_col(generalisation_df, ["recall", "Recall"])
-    precision_col = _pick_col(generalisation_df, ["precision", "Precision"])
-    f1_col = _pick_col(generalisation_df, ["f1", "F1"])
-    auc_col = _pick_col(generalisation_df, ["roc_auc", "roc-auc", "ROC_AUC", "auc"])
-    if None in {fmt_col, model_col, recall_col, precision_col, f1_col, auc_col}:
-        raise ValueError("generalisation_results.csv missing required columns.")
-
-    rows = []
-    for _, rec in generalisation_df.iterrows():
-        fmt = str(rec[fmt_col])
-        model = str(rec[model_col])
-        recall = _safe_float(rec[recall_col])
-        precision = _safe_float(rec[precision_col])
-        f1 = _safe_float(rec[f1_col])
-        auc = _safe_float(rec[auc_col])
-
-        if model == "Transformer" and not np.isnan(auc) and auc < 0.5:
-            note = "Flagged all samples as malicious"
-        elif model == "XGBoost" and not np.isnan(recall) and recall == 1.0:
-            note = "ZIP-based, full feature transfer"
-        elif (
-            not np.isnan(auc)
-            and auc > 0.95
-            and not np.isnan(recall)
-            and recall < 0.5
-        ):
-            note = "Signal present, threshold miscalibration"
-        else:
-            note = ""
-
-        rows.append([
-            fmt,
-            model,
-            _format_metric(recall, 4),
-            _format_metric(precision, 4),
-            _format_metric(f1, 4),
-            _format_metric(auc, 4),
-            note,
-        ])
-
-    cols = ["Format", "Model", "Recall", "Precision", "F1", "ROC-AUC", "Notes"]
-
-    n_data_rows = len(rows)
-    fig_height = (n_data_rows + 1) * 0.13 + 0.20 + 0.10
-
-    fig, ax = plt.subplots(figsize=(7.0, fig_height), constrained_layout=True)
-    ax.axis("off")
-
-    table = ax.table(
-        cellText=rows,
-        colLabels=cols,
-        colWidths=[0.12, 0.14, 0.09, 0.11, 0.08, 0.10, 0.36],
-        cellLoc="center",
-        loc="center",
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(8.5)
-
-    for (row, col), cell in table.get_celld().items():
-        cell.set_edgecolor(MED_GRAY)
-        cell.set_linewidth(0.5)
-
-        if row == 0:
-            cell.set_facecolor(PRIMARY_BLUE)
-            cell.set_text_props(color="white", fontweight="bold", fontsize=9)
-            cell.set_height(0.15)
-            continue
-
-        cell.set_height(0.13)
-        cell.set_facecolor("white" if row % 2 else LIGHT_GRAY)
-
-        if col == 5:
-            val = _safe_float(rows[row - 1][5])
-            if np.isnan(val):
-                continue
-            if val >= 0.95:
-                cell.set_text_props(color=SUCCESS_GREEN, fontweight="bold")
-            elif val < 0.50:
-                cell.set_text_props(color=PRIMARY_RED, fontweight="bold")
-            else:
-                cell.set_text_props(color=PRIMARY_BLUE)
-
-    return _save_png_pdf(fig, output_dir, "table4_generalisation_results")
-
-
-def verify_outputs(output_dir: str) -> tuple[int, int, list[str]]:
-    """Verify output resolution and PDF pairing for all PNG figures."""
-    out_dir = Path(output_dir)
-    png_files = sorted(out_dir.glob("*.png"))
+def verify_outputs() -> tuple[int, int, list[str]]:
+    """Check all PNG files for resolution and PDF pairing."""
+    png_dir = Path(PNG_DIR)
+    pdf_dir = Path(PDF_DIR)
     warnings: list[str] = []
-    pdf_ok_count = 0
+    pdf_ok = 0
 
-    print("\nVerification report:")
+    png_files = sorted(png_dir.glob("*.png")) if png_dir.exists() else []
+    print(f"\nVerification ({len(png_files)} PNG files in {PNG_DIR}):")
+
     for png in png_files:
-        img = plt.imread(png)
-        width_px, height_px = int(img.shape[1]), int(img.shape[0])
-
-        if "fig" in png.name or "table" in png.name:
-            if width_px < 2000:
-                warning = (
-                    f"WARNING: {png.name} may be low resolution "
-                    f"({width_px}px wide)"
-                )
-                print(warning)
-                warnings.append(warning)
-            else:
-                print(f"OK: {png.name} {width_px}x{height_px}px")
-
-        pdf_path = png.with_suffix(".pdf")
-        if pdf_path.exists():
-            print(f"PDF OK: {pdf_path}")
-            pdf_ok_count += 1
+        img = plt.imread(str(png))
+        w_px = int(img.shape[1])
+        h_px = int(img.shape[0])
+        if w_px < 2000:
+            msg = f"  LOW-RES: {png.name} ({w_px}px wide — expected ≥2000px at 600 DPI)"
+            print(msg)
+            warnings.append(msg)
         else:
-            warning = f"MISSING PDF: {pdf_path}"
-            print(warning)
-            warnings.append(warning)
+            print(f"  OK: {png.name}  {w_px}x{h_px}px")
 
-    return len(png_files), pdf_ok_count, warnings
+        pdf = pdf_dir / png.with_suffix(".pdf").name
+        if pdf.exists():
+            pdf_ok += 1
+        else:
+            msg = f"  MISSING PDF: {pdf}"
+            print(msg)
+            warnings.append(msg)
+
+    return len(png_files), pdf_ok, warnings
 
 
-def _run_step(step_name: str, fn: Any, *args: Any) -> bool:
-    """Run one output-generation step with isolated failure handling."""
+# ── Step runner ───────────────────────────────────────────────────────────────
+
+def _run(name: str, fn: Any, *args: Any) -> bool:
+    print(f"\n--- {name} ---")
     try:
-        png_path, pdf_path = fn(*args)
-        print(f"OK: {step_name} saved -> {png_path} and {pdf_path}")
+        png, pdf = fn(*args)
+        print(f"  OK: {name}")
         return True
     except Exception as exc:
-        print(f"FAILED: {step_name} - {exc}")
+        print(f"  FAILED: {name} — {exc}")
         traceback.print_exc()
         return False
 
 
+# ── Main ──────────────────────────────────────────────────────────────────────
+
 def main() -> None:
-    """Entry point for complete figure regeneration workflow."""
     configure_style()
-    output_dir = "paper/figures"
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    Path(PNG_DIR).mkdir(parents=True, exist_ok=True)
+    Path(PDF_DIR).mkdir(parents=True, exist_ok=True)
+    Path(CSV_DIR).mkdir(parents=True, exist_ok=True)
 
-    print("=" * 60)
-    print("ZombieGuard - Generating all paper figures/tables")
-    print("=" * 60)
+    print("=" * 65)
+    print("ZombieGuard — Generating all paper figures")
+    print(f"  PNG → {PNG_DIR}")
+    print(f"  PDF → {PDF_DIR}")
+    print("=" * 65)
 
-    # STEP 1 - Load all data sources at startup.
+    # ── Load shared data ──────────────────────────────────────────────────────
     model = None
-    features_df = None
-    labels_df = None
-    merged = None
-    baseline_df = None
-    generalisation_df = None
-    realworld_df = None
-    shap_values = None
-    mean_shap = None
-    feature_names: list[str] = []
-
     model_path = "models/xgboost_model.pkl"
     if Path(model_path).exists():
         try:
             model = joblib.load(model_path)
-            print(f"Loaded model: {model_path}")
+            print(f"\nLoaded model: {model_path}")
         except Exception as exc:
-            print(f"ERROR: Could not load model at {model_path}: {exc}")
+            print(f"\nERROR loading model: {exc}")
     else:
-        print(f"ERROR: Missing model file: {model_path}")
+        print(f"\nERROR: Missing model file: {model_path}")
 
-    features_df = _read_csv_or_none("data/processed/features.csv", "features_df")
-    labels_df = _read_csv_or_none("data/processed/labels.csv", "labels_df")
-    baseline_df = _read_csv_or_none(
-        "paper/figures/table1_baseline_comparison.csv",
-        "baseline_df",
-    )
-    generalisation_df = _read_csv_or_none(
-        "paper/figures/generalisation_results.csv",
-        "generalisation_df",
-    )
+    features_df      = _read_csv("data/processed/features.csv", "features")
+    labels_df        = _read_csv("data/processed/labels.csv", "labels")
+    generalisation_df = _read_csv(f"{CSV_DIR}/generalisation_results.csv", "generalisation")
+    baseline_df      = _read_csv(f"{CSV_DIR}/table1_baseline_comparison.csv", "baseline")
+    multi_baseline_df = _read_csv(f"{CSV_DIR}/table6b_multi_baseline_hard_test.csv", "multi_baseline_hard")
+    variant_df       = _read_csv(f"{CSV_DIR}/table7_variant_recall.csv", "variant_recall")
+    temporal_df      = _read_csv(f"{CSV_DIR}/table8_temporal_stability.csv", "temporal_stability")
+    realworld_df     = _read_csv("data/realworld_labels.csv", "realworld") if Path("data/realworld_labels.csv").exists() else None
 
-    realworld_path = "data/realworld_labels.csv"
-    if os.path.exists(realworld_path):
-        realworld_df = _read_csv_or_none(realworld_path, "realworld_df")
-    else:
-        print("INFO: data/realworld_labels.csv not found. Table 3 fallback may be used.")
+    # Merge features + labels for SHAP
+    merged = None
+    shap_values = mean_shap = None
+    feature_names: list[str] = []
 
     if features_df is not None and labels_df is not None:
         try:
             merged = features_df.merge(labels_df, on="filename")
-            print(f"Merged features/labels rows: {len(merged)}")
+            print(f"  Merged features/labels: {len(merged)} rows")
         except Exception as exc:
-            print(f"ERROR: Failed to merge features and labels: {exc}")
+            print(f"  ERROR merging features/labels: {exc}")
 
     if model is not None and merged is not None:
-        missing_cols = [col for col in FEATURE_COLS if col not in merged.columns]
-        if missing_cols:
-            print(
-                "ERROR: Missing columns for SHAP computation in merged dataframe: "
-                f"{missing_cols}"
-            )
+        missing = [c for c in FEATURE_COLS if c not in merged.columns]
+        if missing:
+            print(f"  ERROR: Missing SHAP columns: {missing}")
         else:
             x = merged[FEATURE_COLS].copy()
-            for col in [
-                "method_mismatch",
-                "declared_vs_entropy_flag",
-                "lf_unknown_method",
-                "any_crc_mismatch",
-                "is_encrypted",
-            ]:
+            for col in ["method_mismatch", "declared_vs_entropy_flag",
+                        "lf_unknown_method", "any_crc_mismatch", "is_encrypted"]:
                 if col in x.columns:
                     x[col] = x[col].astype(float)
-
-            feature_names = [FEATURE_LABELS.get(col, col) for col in FEATURE_COLS]
+            feature_names = [FEATURE_LABELS.get(c, c) for c in FEATURE_COLS]
             x.columns = feature_names
-
             try:
                 explainer = shap.TreeExplainer(model)
                 shap_values = explainer.shap_values(x)
                 mean_shap = np.abs(shap_values).mean(axis=0)
-                print("Computed SHAP values from model live.")
+                print("  Computed SHAP values.")
             except Exception as exc:
-                print(f"ERROR: Failed to compute SHAP values live: {exc}")
+                print(f"  ERROR computing SHAP: {exc}")
 
-    expected_variant_count = _extract_variant_count("data/generate_zombie_samples.py")
+    expected_variants = _extract_variant_count("data/scripts/generate_zombie_samples.py")
 
-    # Generation steps with isolated failures.
-    successful_steps = 0
-    total_steps = 8
+    # ── Generate figures ──────────────────────────────────────────────────────
+    ok = 0
+    total = 0
 
-    if _run_step("Figure 1", generate_fig1_zip_header, output_dir):
-        successful_steps += 1
+    total += 1
+    if _run("Figure 1 — ZIP Header Mismatch", generate_fig1_zip_header):
+        ok += 1
 
-    if _run_step("Figure 2", generate_fig2_taxonomy, output_dir, expected_variant_count):
-        successful_steps += 1
+    total += 1
+    if _run("Figure 2 — Attack Taxonomy", generate_fig2_taxonomy, expected_variants):
+        ok += 1
 
+    total += 1
     if shap_values is not None and mean_shap is not None and feature_names:
-        if _run_step(
-            "Figure 3",
-            generate_fig3_shap,
-            shap_values,
-            feature_names,
-            mean_shap,
-            output_dir,
-        ):
-            successful_steps += 1
+        if _run("Figure 3 — SHAP Importance", generate_fig3_shap, shap_values, feature_names, mean_shap):
+            ok += 1
     else:
-        print("FAILED: Figure 3 - SHAP inputs unavailable; skipping.")
+        print("\n--- Figure 3 --- SKIPPED (model/SHAP unavailable)")
 
+    total += 1
     if generalisation_df is not None:
-        if _run_step(
-            "Figure 4",
-            generate_fig4_generalisation,
-            generalisation_df,
-            output_dir,
-        ):
-            successful_steps += 1
+        if _run("Figure 4 — Cross-Format Generalisation", generate_fig4_generalisation, generalisation_df):
+            ok += 1
     else:
-        print("FAILED: Figure 4 - generalisation_df unavailable; skipping.")
+        print("\n--- Figure 4 --- SKIPPED (generalisation_results.csv not found)")
 
-    if baseline_df is not None:
-        if _run_step(
-            "Table 1",
-            generate_table1_baseline,
-            baseline_df,
-            output_dir,
-        ):
-            successful_steps += 1
+    total += 1
+    if multi_baseline_df is not None:
+        if _run("Figure 5 — Multi-Model Baseline", generate_fig5_multi_baseline, multi_baseline_df):
+            ok += 1
     else:
-        print("FAILED: Table 1 - baseline_df unavailable; skipping.")
+        print("\n--- Figure 5 --- SKIPPED (table6b_multi_baseline_hard_test.csv not found — run src/multi_baseline.py)")
 
-    if features_df is not None and labels_df is not None:
-        if _run_step(
-            "Table 2",
-            generate_table2_dataset,
-            features_df,
-            labels_df,
-            output_dir,
-        ):
-            successful_steps += 1
+    total += 1
+    if variant_df is not None:
+        if _run("Figure 6 — Per-Variant Recall", generate_fig6_variant_recall, variant_df):
+            ok += 1
     else:
-        print("FAILED: Table 2 - features/labels unavailable; skipping.")
+        print("\n--- Figure 6 --- SKIPPED (table7_variant_recall.csv not found — run src/variant_recall.py)")
 
-    if _run_step("Table 3", generate_table3_prevalence, realworld_df, output_dir):
-        successful_steps += 1
-
-    if _run_step("Table 3A", generate_targeted_prevalence, output_dir):
-        successful_steps += 1
-
-    if generalisation_df is not None:
-        if _run_step(
-            "Table 4",
-            generate_table4_generalisation,
-            generalisation_df,
-            output_dir,
-        ):
-            successful_steps += 1
+    total += 1
+    if temporal_df is not None:
+        if _run("Figure 7 — Temporal Stability", generate_fig7_temporal_stability, temporal_df):
+            ok += 1
     else:
-        print("FAILED: Table 4 - generalisation_df unavailable; skipping.")
+        print("\n--- Figure 7 --- SKIPPED (table8_temporal_stability.csv not found — run src/temporal_stability.py)")
 
-    png_count, pdf_count, warnings = verify_outputs(output_dir)
+    total += 1
+    if _run("Table 3 — Prevalence Breakdown", generate_table3_prevalence, realworld_df):
+        ok += 1
 
-    print("\n" + "=" * 60)
-    print("Final summary")
-    print("=" * 60)
-    print(f"Successful steps: {successful_steps}/{total_steps + 1}")
-    print(f"Total figures generated (PNG found): {png_count}")
-    print(f"Total PDFs generated (paired with PNG): {pdf_count}")
+    total += 1
+    if _run("Table 3A — Targeted Prevalence", generate_table3a_targeted_prevalence):
+        ok += 1
 
+    # ── Verify ────────────────────────────────────────────────────────────────
+    png_count, pdf_count, warnings = verify_outputs()
+
+    print("\n" + "=" * 65)
+    print("SUMMARY")
+    print("=" * 65)
+    print(f"Steps completed:  {ok}/{total}")
+    print(f"PNG files:        {png_count}  (in {PNG_DIR})")
+    print(f"PDF files paired: {pdf_count}  (in {PDF_DIR})")
     if warnings:
-        print("Warnings:")
-        for warn in warnings:
-            print(f"  - {warn}")
-        ready = "No"
+        print(f"Warnings ({len(warnings)}):")
+        for w in warnings:
+            print(f"  {w}")
+        print("READY FOR SUBMISSION: No")
     else:
         print("Warnings: None")
-        ready = "Yes"
-
-    print(f"READY FOR SUBMISSION: {ready}")
+        print("READY FOR SUBMISSION: Yes")
 
 
 if __name__ == "__main__":

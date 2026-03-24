@@ -1,0 +1,16 @@
+window,rank,feature
+T1,1,data_entropy_renyi
+T1,2,data_entropy_shannon
+T1,3,lf_compression_method
+T1,4,is_encrypted
+T1,5,suspicious_entry_count
+T2,1,data_entropy_renyi
+T2,2,data_entropy_shannon
+T2,3,lf_compression_method
+T2,4,is_encrypted
+T2,5,suspicious_entry_count
+T3,1,data_entropy_renyi
+T3,2,data_entropy_shannon
+T3,3,lf_compression_method
+T3,4,is_encrypted
+T3,5,suspicious_entry_count

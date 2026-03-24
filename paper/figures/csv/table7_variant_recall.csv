@@ -1,0 +1,10 @@
+variant,name,n_total,n_test,TP,FN,recall,mean_prob,fn_mean_prob,primary_feature
+A,Classic Zombie ZIP,350,350,350,0,1.0,0.9993,,method_mismatch + declared_vs_entropy_flag
+B,Method-only mismatch,100,100,100,0,1.0,0.9991,,method_mismatch
+C,Gootloader concatenation,150,150,148,2,0.9867,0.9889,0.2062,eocd_count > 1
+D,Multi-file decoy,150,150,150,0,1.0,0.9987,,suspicious_entry_ratio
+E,CRC32 mismatch,100,100,100,0,1.0,0.9995,,any_crc_mismatch
+F,Extra field noise,100,100,100,0,1.0,0.9992,,declared_vs_entropy_flag
+G,High compression gap,100,100,100,0,1.0,0.9989,,declared_vs_entropy_flag + entropy
+H,Size field mismatch,100,100,100,0,1.0,0.9995,,method_mismatch + entropy
+I,Undefined method code,200,200,200,0,1.0,0.995,,lf_unknown_method

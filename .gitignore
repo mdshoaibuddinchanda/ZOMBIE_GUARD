@@ -1,15 +1,19 @@
-# -----------------------------
+# ─────────────────────────────────────────────
 # Python
-# -----------------------------
+# ─────────────────────────────────────────────
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyo
 *.so
+.env
+.venv/
+venv/
+env/
+ENV/
 
-# -----------------------------
-# Virtual environments
-# -----------------------------
-# OS and editor
+# ─────────────────────────────────────────────
+# IDE / OS
+# ─────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 .vscode/
@@ -18,10 +22,9 @@ Thumbs.db
 *.swo
 *~
 
-# Python cache and build
-__pycache__/
-*.py[cod]
-*.so
+# ─────────────────────────────────────────────
+# Test / lint caches
+# ─────────────────────────────────────────────
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -29,58 +32,92 @@ __pycache__/
 htmlcov/
 build/
 dist/
+.ipynb_checkpoints/
 
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
-
-# Logs and temp
+# ─────────────────────────────────────────────
+# Logs and temp files
+# ─────────────────────────────────────────────
 *.log
 *.tmp
 *.bak
+detector_batch_output.txt
 
-# Data and model artifacts
+# ─────────────────────────────────────────────
+# DATA — malware samples and large datasets
+# Never push actual malware or large binary data.
+# ─────────────────────────────────────────────
+
+# Raw training data (synthetic malicious + benign ZIPs)
 data/raw/
-data/benign_realworld/
-models/*.joblib
-models/*.pkl
-*.zip
 
-# Keep canonical processed dataset tracked
+# Real malware samples from MalwareBazaar
+data/real_world_validation/
+
+# Real-world split directories (derived from real malware)
+data/real_splits/
+
+# Hard test set (contains real malware samples)
+data/hard_test/
+
+# Generalisation study archives (APK, RAR, 7z)
+data/generalisation/
+
+# Benign real-world ZIPs (large, regenerable)
+data/benign_realworld/
+
+# Operational download/resume state files
+data/download_progress.json
+data/timestamp_progress.json
+data/benign_fp_progress.json
+data/benign_fp_results.csv
+data/benign_fp_summary.txt
+data/realworld_splits.csv
+
+# Feature extraction cache (auto-rebuilt by temporal_stability.py)
+data/temporal_features_cache.csv
+
+# ─────────────────────────────────────────────
+# DATA — what IS tracked
+# ─────────────────────────────────────────────
+
+# Canonical processed feature matrix (source of truth for training)
+# data/processed/features.csv  ← tracked
+# data/processed/labels.csv    ← tracked
 data/processed/*
 !data/processed/features.csv
 !data/processed/labels.csv
 
-# Paper artifact policy:
-# Track CSV source tables, ignore regenerated image/binary outputs.
+# MalwareBazaar timestamp metadata (no malware content, just dates)
+# data/bazaar_timestamps.csv   ← tracked
+
+# data/scripts/                ← tracked (all pipeline code)
+
+# ─────────────────────────────────────────────
+# MODELS — large binary files, not tracked
+# ─────────────────────────────────────────────
+models/*.pkl
+models/*.joblib
+models/*.pt
+
+# ─────────────────────────────────────────────
+# PAPER FIGURES
+# CSV source tables → tracked (version-controlled data)
+# PNG / PDF outputs → NOT tracked (regenerate with generate_all_figures.py)
+# ─────────────────────────────────────────────
+paper/figures/png/
+paper/figures/pdf/
+
+# Also exclude any stray image files at the flat figures/ level
 paper/figures/*.png
 paper/figures/*.pdf
 paper/figures/*.svg
 paper/figures/*.jpg
 paper/figures/*.jpeg
-!paper/figures/*.csv
-data/generalisation/**
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-.env
-.venv/
-
-# Models (large files)
-models/*.pkl
-models/*.pt
-
-# Jupyter
-.ipynb_checkpoints/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Temporary files
-*.txt
-detector_batch_output.txt
+# ─────────────────────────────────────────────
+# ZIP files — never push sample data
+# ─────────────────────────────────────────────
+*.zip
+*.rar
+*.7z
+*.apk
