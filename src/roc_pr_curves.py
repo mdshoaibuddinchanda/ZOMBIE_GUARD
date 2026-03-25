@@ -196,7 +196,7 @@ def main():
     # Save summary CSV
     Path(CSV_DIR).mkdir(parents=True, exist_ok=True)
     summary = pd.DataFrame([
-        {"model": "ZombieGuard XGBoost", "roc_auc": round(auc_xgb, 4), "avg_precision": round(ap_xgb, 4)},
+        {"model": "ZombieGuard LightGBM", "roc_auc": round(auc_xgb, 4), "avg_precision": round(ap_xgb, 4)},
         {"model": "Rule-based baseline", "roc_auc": round(auc_base, 4), "avg_precision": round(ap_base, 4)},
     ])
     csv_path = f"{CSV_DIR}/table_roc_pr_auc.csv"

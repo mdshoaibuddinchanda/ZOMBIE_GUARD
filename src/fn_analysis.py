@@ -2,7 +2,7 @@
 fn_analysis.py
 EXPERIMENT 7 — False Negative Analysis
 
-Identifies and explains the single false negative in the XGBoost holdout test set.
+Identifies and explains the single false negative in the LightGBM holdout test set.
 Reproduces the exact 80/20 split, finds the missed sample, prints its full feature
 vector, and saves a structured analysis CSV.
 

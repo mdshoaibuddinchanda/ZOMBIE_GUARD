@@ -11,7 +11,7 @@ Motivation (TESSERACT / NDSS 2025 concept drift framing):
 Method:
   1. Sort 1318 real-world MalwareBazaar samples by first_seen timestamp.
   2. Split into three temporal windows T1/T2/T3 (earliest/middle/latest ~33%).
-  3. Train XGBoost on T1 malicious + proportional benign, test on T2 and T3.
+  3. Train LightGBM on T1 malicious + proportional benign, test on T2 and T3.
   4. Also evaluate the pre-trained synthetic model (zero-shot) on all three windows.
   5. Report recall, precision, F1, AUC per window.
   6. Report top-5 SHAP features per window to check stability.
@@ -41,7 +41,7 @@ import shap
 from sklearn.metrics import (
     f1_score, precision_score, recall_score, roc_auc_score,
 )
-from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.extractor import extract_features
@@ -213,17 +213,15 @@ def split_temporal(mal_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd
 
 # ── Model helpers ─────────────────────────────────────────────────────────────
 
-def build_xgb() -> XGBClassifier:
-    return XGBClassifier(
+def build_xgb() -> LGBMClassifier:
+    return LGBMClassifier(
         n_estimators=300,
         max_depth=6,
         learning_rate=0.05,
         subsample=0.8,
         colsample_bytree=0.8,
-        use_label_encoder=False,
-        eval_metric="logloss",
         random_state=42,
-        verbosity=0,
+        verbose=-1,
     )
 
 

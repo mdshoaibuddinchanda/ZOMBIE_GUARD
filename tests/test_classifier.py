@@ -18,7 +18,7 @@ from src.classifier import load_model, predict
 # -- Fixtures ---------------------------------------------------------------
 ZOMBIE_ZIP = "tests/fixtures/zombie.zip"
 NORMAL_ZIP = "tests/fixtures/normal.zip"
-MODEL_PATH = "models/xgboost_model.pkl"
+MODEL_PATH = "models/lgbm_model.pkl"
 FEATURES_CSV = "data/processed/features.csv"
 LABELS_CSV = "data/processed/labels.csv"
 

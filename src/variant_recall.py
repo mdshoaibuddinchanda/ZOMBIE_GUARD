@@ -3,7 +3,7 @@ variant_recall.py
 ZombieGuard - Per-variant recall breakdown.
 
 For each of the 8 synthetic attack variants (A-H) plus real-world samples,
-evaluates the trained XGBoost model and reports:
+evaluates the trained LightGBM model and reports:
   Variant | Name | N (test) | TP | FN | Recall | Primary driving feature
 
 This table demonstrates that the taxonomy has diagnostic power —
@@ -318,7 +318,7 @@ def generate_recall_bar(df: pd.DataFrame, png_dir: str, pdf_dir: str) -> str:
     ax.set_xlim(0.0, 1.12)
     ax.set_xlabel("Recall", fontsize=9)
     ax.set_title(
-        "Figure 6 — Per-Variant Recall (XGBoost)",
+        "Figure 6 — Per-Variant Recall (LightGBM)",
         fontsize=11, fontweight="bold",
     )
     ax.axvline(x=1.0, linestyle="--", linewidth=0.9, color=MED_GRAY)

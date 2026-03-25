@@ -1,0 +1,2 @@
+train_dataset,test_dataset,precision,recall,false_positive_rate,tn,fp,fn,tp
+Synthetic only,"Real world (1,366)",0.9746835443037974,0.8651685393258427,0.001606425702811245,1243,2,12,77

@@ -1,0 +1,8 @@
+group,removed_features,recall,delta_vs_full_model
+None (full model),---,1.0,
+Entropy features,"data_entropy_shannon, data_entropy_renyi, declared_vs_entropy_flag",1.0,0.0
+Suspicious entry group,"method_mismatch, suspicious_entry_count, suspicious_entry_ratio",0.8888888888888888,-0.11111111111111116
+Header method fields,"lf_compression_method, cd_compression_method",1.0,0.0
+CRC mismatch,any_crc_mismatch,1.0,0.0
+EOCD count,eocd_count,1.0,0.0
+Encryption flag,is_encrypted,1.0,0.0

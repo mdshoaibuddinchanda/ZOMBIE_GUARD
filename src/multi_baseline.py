@@ -368,8 +368,8 @@ def generate_bar_chart(df: pd.DataFrame, png_dir: str, pdf_dir: str, stem: str, 
 
     x = np.arange(len(models))
 
-    bar_colors_recall = [SUCCESS_GREEN if m == "XGBoost" else SECONDARY_BLUE for m in models]
-    bar_colors_auc = [SUCCESS_GREEN if m == "XGBoost" else AMBER for m in models]
+    bar_colors_recall = [SUCCESS_GREEN if m == "LightGBM" else SECONDARY_BLUE for m in models]
+    bar_colors_auc = [SUCCESS_GREEN if m == "LightGBM" else AMBER for m in models]
 
     fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.8), constrained_layout=False)
 
@@ -408,7 +408,7 @@ def print_summary_table(df: pd.DataFrame, label: str) -> None:
     print(f"{'Model':<22} {'Acc':>7} {'Prec':>7} {'Rec':>7} {'F1':>7} {'AUC':>7} {'FP':>5} {'FN':>5}")
     print("-" * 75)
     for _, row in df.iterrows():
-        marker = " <-- XGBoost" if row["model"] == "XGBoost" else ""
+        marker = " <-- LightGBM (primary)" if row["model"] == "LightGBM" else ""
         print(
             f"{row['model']:<22} "
             f"{row['accuracy']:>7.4f} "

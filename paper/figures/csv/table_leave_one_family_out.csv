@@ -1,0 +1,3 @@
+held_out_family,train_rows,test_positive_rows,test_negative_rows,recall,precision,false_positive_rate,tn,fp,fn,tp
+Gootloader,4399,68,1245,0.9852941176470589,1.0,0.0,1245,0,1,67
+Entropy,4447,20,1245,0.35,1.0,0.0,1245,0,13,7

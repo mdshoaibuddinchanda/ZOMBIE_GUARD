@@ -405,7 +405,7 @@ def generate_fig5_multi_baseline(baseline_df: pd.DataFrame) -> tuple[str, str]:
         (axes[0], recall_vals, "Recall (Malicious Detection Rate)", "Recall"),
         (axes[1], auc_vals,    "ROC-AUC",                          "ROC-AUC"),
     ]:
-        colors = [SUCCESS_GREEN if m == "XGBoost" else SECONDARY_BLUE for m in models]
+        colors = [SUCCESS_GREEN if m == "LightGBM" else SECONDARY_BLUE for m in models]
         bars = ax.bar(x, vals, color=colors, edgecolor="white", linewidth=0.8)
         ax.set_xticks(x)
         ax.set_xticklabels(models, rotation=18, ha="right", fontsize=8)
@@ -440,7 +440,7 @@ def generate_fig6_variant_recall(variant_df: pd.DataFrame) -> tuple[str, str]:
     ax.invert_yaxis()
     ax.set_xlim(0.0, 1.12)
     ax.set_xlabel("Recall", fontsize=9)
-    ax.set_title("Figure 6 — Per-Variant Recall (XGBoost, full malicious corpus)",
+    ax.set_title("Figure 6 — Per-Variant Recall (LightGBM, full malicious corpus)",
                  fontsize=11, fontweight="bold")
     ax.axvline(x=1.0, linestyle="--", linewidth=0.9, color=MED_GRAY)
     ax.axvline(x=0.90, linestyle=":", linewidth=0.8, color=AMBER, alpha=0.7)
@@ -602,7 +602,7 @@ def generate_table3a_targeted_prevalence() -> tuple[str, str]:
 
 def generate_fig8_roc_curve(model, features_df: pd.DataFrame,
                              labels_df: pd.DataFrame) -> tuple[str, str]:
-    """ROC curve: ZombieGuard XGBoost vs rule-based baseline."""
+    """ROC curve: ZombieGuard LightGBM vs rule-based baseline."""
     from sklearn.metrics import roc_auc_score, roc_curve
     from sklearn.model_selection import train_test_split
 
@@ -649,7 +649,7 @@ def generate_fig8_roc_curve(model, features_df: pd.DataFrame,
 
     # Save AUC summary CSV
     pd.DataFrame([
-        {"model": "ZombieGuard XGBoost", "roc_auc": round(auc_xgb, 4)},
+        {"model": "ZombieGuard LightGBM", "roc_auc": round(auc_xgb, 4)},
         {"model": "Rule-based baseline", "roc_auc": round(auc_base, 4)},
     ]).to_csv(f"{CSV_DIR}/table_roc_pr_auc.csv", index=False)
 
@@ -660,7 +660,7 @@ def generate_fig8_roc_curve(model, features_df: pd.DataFrame,
 
 def generate_fig9_pr_curve(model, features_df: pd.DataFrame,
                             labels_df: pd.DataFrame) -> tuple[str, str]:
-    """PR curve: ZombieGuard XGBoost vs rule-based baseline."""
+    """PR curve: ZombieGuard LightGBM vs rule-based baseline."""
     from sklearn.metrics import average_precision_score, precision_recall_curve
     from sklearn.model_selection import train_test_split
 
@@ -785,6 +785,64 @@ def generate_fig11_family_prevalence(family_df: pd.DataFrame) -> tuple[str, str]
     return _save(fig, "fig11_family_prevalence")
 
 
+# ── Credibility validation suite (synthetic vs real) ───────────────────────
+
+def generate_fig_synthetic_real_alignment() -> tuple[str, str]:
+    """Generate synthetic-vs-real PCA projection and alignment table."""
+    from src.feature_distribution_validation import OUT_PDF, OUT_PNG, main as run_alignment
+
+    run_alignment()
+    return str(OUT_PNG), str(OUT_PDF)
+
+
+def generate_table_synthetic_train_real_test() -> tuple[str, str]:
+    """Generate strict train-synthetic / test-real transfer metrics table."""
+    from src.synthetic_train_real_test import OUT_CSV, main as run_transfer
+
+    run_transfer()
+    # _run expects a tuple; table-only outputs report CSV path in both slots.
+    return str(OUT_CSV), str(OUT_CSV)
+
+
+def generate_table_leave_one_family_out() -> tuple[str, str]:
+    """Generate leave-one-family-out generalization table."""
+    from src.leave_one_family_out import OUT_CSV, main as run_lofo
+
+    run_lofo()
+    return str(OUT_CSV), str(OUT_CSV)
+
+
+def generate_table_real_only_ablation() -> tuple[str, str]:
+    """Generate real-only feature-group ablation table."""
+    from src.real_only_ablation import OUT_CSV, main as run_ablation
+
+    run_ablation()
+    return str(OUT_CSV), str(OUT_CSV)
+
+
+def generate_table_external_benign_validation() -> tuple[str, str]:
+    """Generate external benign validation results on independent public corpus."""
+    from src.external_benign_validation import test_external_benign_corpus
+    from pathlib import Path
+    
+    repo_root = Path(__file__).parent.parent
+    model_path = repo_root / "models" / "lgbm_model.pkl"
+    external_benign_dir = repo_root / "data" / "external_benign"
+    output_csv = repo_root / "paper" / "figures" / "csv" / "table_external_benign_validation.csv"
+    
+    results = test_external_benign_corpus(
+        model_path=str(model_path),
+        benign_zip_dir=str(external_benign_dir),
+        output_csv=str(output_csv)
+    )
+    
+    if results is None:
+        print("  WARNING: External benign validation skipped (corpus not found)")
+        return str(output_csv), str(output_csv)
+    
+    return str(output_csv), str(output_csv)
+
+
 # ── Verify outputs ────────────────────────────────────────────────────────────
 
 def verify_outputs() -> tuple[int, int, list[str]]:
@@ -842,7 +900,7 @@ def main() -> None:
     Path(CSV_DIR).mkdir(parents=True, exist_ok=True)
 
     print("=" * 65)
-    print("ZombieGuard — Generating all paper figures")
+    print("ZombieGuard — Generating all paper figures and validation artifacts")
     print(f"  PNG → {PNG_DIR}")
     print(f"  PDF → {PDF_DIR}")
     print("=" * 65)
@@ -985,6 +1043,26 @@ def main() -> None:
             ok += 1
     else:
         print("\n--- Figure 11 --- SKIPPED (table_family_prevalence.csv not found — run src/family_prevalence.py)")
+
+    total += 1
+    if _run("Credibility — Synthetic vs Real Feature Alignment", generate_fig_synthetic_real_alignment):
+        ok += 1
+
+    total += 1
+    if _run("Credibility — Train Synthetic, Test Real", generate_table_synthetic_train_real_test):
+        ok += 1
+
+    total += 1
+    if _run("Credibility — Leave-One-Family-Out", generate_table_leave_one_family_out):
+        ok += 1
+
+    total += 1
+    if _run("Credibility — Real-Only Ablation", generate_table_real_only_ablation):
+        ok += 1
+
+    total += 1
+    if _run("Credibility — External Benign Validation", generate_table_external_benign_validation):
+        ok += 1
 
     # ── Verify ────────────────────────────────────────────────────────────────
     png_count, pdf_count, warnings = verify_outputs()
