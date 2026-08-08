@@ -27,7 +27,7 @@
     "name": "lightgbm",
     "version": "4.7.0"
   },
-  "model_sha256": "ae526c3fb87be842028b2528c630059c045a69490b4ba7628ff1b225a59ae507",
+  "model_sha256": "c9534fbddcd976eaa30e38dc188175b1b0c55ea36d32cd59ed7a64ef12a472ff",
   "release_calibration": {
     "achieved_benign_false_positive_rate": 0.004464285714285714,
     "attack_variants": [

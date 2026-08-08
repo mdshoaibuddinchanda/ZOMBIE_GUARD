@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -281,6 +282,9 @@ def test_native_model_round_trip_has_verified_json_sidecar(tmp_path: Path) -> No
     assert result["target"] == "zip_structural_evasion"
     assert "HEADER_METHOD_MISMATCH" in result["reason_codes"]
     metadata = json.loads(metadata_path_for(model_path).read_text(encoding="utf-8"))
+    model_bytes = model_path.read_bytes()
+    assert b"\r" not in model_bytes
+    assert hashlib.sha256(model_bytes).hexdigest() == metadata["model_sha256"]
     assert metadata["artifact_format"] == "lightgbm_booster_text"
     assert metadata["feature_names"] == FEATURE_COLS
     assert (

@@ -909,6 +909,18 @@ def _as_booster(model: LGBMClassifier | lgb.Booster) -> lgb.Booster:
     raise TypeError("only fitted LightGBM classifiers or native Boosters can be saved")
 
 
+def _canonicalize_native_model_text(path: Path) -> None:
+    """Normalize native LightGBM text bytes to UTF-8 with LF line endings."""
+
+    raw = path.read_bytes()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("native LightGBM model is not valid UTF-8 text") from exc
+    canonical = text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+    path.write_bytes(canonical)
+
+
 def save_model(
     model: LGBMClassifier | lgb.Booster,
     path: str | Path = MODEL_PATH,
@@ -933,6 +945,10 @@ def save_model(
     model_path.parent.mkdir(parents=True, exist_ok=True)
     temporary = model_path.with_name(f".{model_path.name}.tmp")
     booster.save_model(str(temporary))
+    # LightGBM follows the host platform's newline convention.  Canonicalize
+    # before the atomic replace and checksum so Git checkout normalization can
+    # never invalidate the metadata on another operating system.
+    _canonicalize_native_model_text(temporary)
     temporary.replace(model_path)
     model_digest = sha256_file(model_path)
 
