@@ -1,0 +1,51 @@
+{
+  "attack_variants": {
+    "A": 350,
+    "B": 100,
+    "C": 150,
+    "D": 150,
+    "E": 100,
+    "F": 100,
+    "G": 100,
+    "H": 100
+  },
+  "curation": "current-parser-synthetic-positive-and-legacy-benign-snapshot-v2",
+  "extractor_feature_schema_version": "2.0.0",
+  "extractor_sha256": "358bbc241352ff94e80bfb2c4c4949d56a2eee539f654f120b4c7d04b2798a52",
+  "feature_columns": [
+    "lf_compression_method",
+    "cd_compression_method",
+    "method_mismatch",
+    "data_entropy_shannon",
+    "data_entropy_renyi",
+    "declared_vs_entropy_flag",
+    "eocd_count",
+    "lf_unknown_method",
+    "file_size_bytes",
+    "entry_count",
+    "suspicious_entry_count",
+    "suspicious_entry_ratio",
+    "entropy_variance",
+    "lf_crc_valid",
+    "any_crc_mismatch",
+    "is_encrypted"
+  ],
+  "features_sha256": "8660984f0fe32658bcbe1d7b2748ce40e5c69890fb5cb901a0579585a62aeeed",
+  "labels_sha256": "9df41354a04eb6fdb332768bf0194d94eafba4b1aeb7468cf7e005678b14b2fd",
+  "limitations": [
+    "The positive class is synthetic.",
+    "The benign class contains legacy feature-only rows because the raw benign archives are absent.",
+    "No independently labelled real-positive benchmark is included.",
+    "Metrics from this snapshot must be described as synthetic evaluation."
+  ],
+  "negative_benign": 1568,
+  "positive_synthetic": 1150,
+  "provenance": {
+    "benign_rows": "Legacy curated feature-only rows; raw benign archives are not present, so they cannot be re-extracted with the current parser.",
+    "synthetic_positive_rows": "Freshly extracted from deterministic inert zombie_* fixtures using the current bounded parser."
+  },
+  "samples": 2718,
+  "schema_version": 1,
+  "synthetic_fixture_corpus_sha256": "2ed3a5de243def41b7786daa8553a3c54b82687d8eb30081170b76a209552f60",
+  "target": "zip_structural_evasion"
+}

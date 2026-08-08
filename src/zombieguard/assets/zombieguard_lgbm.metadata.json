@@ -1,0 +1,96 @@
+{
+  "artifact_format": "lightgbm_booster_text",
+  "calibration_policy": {
+    "benign_false_positive_rate_budget": 0.005,
+    "benign_score_quantile": 0.995,
+    "id": "nested_grouped_oof_benign_quantile_v1",
+    "method": "next_float_above_higher_empirical_benign_quantile",
+    "score_semantics": "uncalibrated_lightgbm_score"
+  },
+  "evaluation_protocol": "nested_leave_one_generated_attack_variant_out",
+  "extractor_feature_schema_version": "2.0.0",
+  "feature_names": [
+    "lf_compression_method",
+    "cd_compression_method",
+    "method_mismatch",
+    "data_entropy_shannon",
+    "data_entropy_renyi",
+    "declared_vs_entropy_flag",
+    "eocd_count",
+    "lf_unknown_method",
+    "suspicious_entry_count",
+    "suspicious_entry_ratio",
+    "any_crc_mismatch",
+    "is_encrypted"
+  ],
+  "library": {
+    "name": "lightgbm",
+    "version": "4.7.0"
+  },
+  "model_sha256": "ae526c3fb87be842028b2528c630059c045a69490b4ba7628ff1b225a59ae507",
+  "release_calibration": {
+    "achieved_benign_false_positive_rate": 0.004464285714285714,
+    "attack_variants": [
+      "A_classic",
+      "B_method_only",
+      "C_gootloader",
+      "D_multifile",
+      "E_crc_mismatch",
+      "F_extra_noise",
+      "G_high_compression",
+      "H_size_mismatch"
+    ],
+    "benign_exceedances": 7,
+    "benign_false_positive_rate_budget": 0.005,
+    "benign_rows": 1568,
+    "benign_score_quantile": 0.995,
+    "coverage_complete": true,
+    "fold_count": 8,
+    "id": "nested_grouped_oof_benign_quantile_v1",
+    "method": "next_float_above_higher_empirical_benign_quantile",
+    "oof_rows": 2718,
+    "positive_rows": 1150,
+    "score_semantics": "uncalibrated_lightgbm_score",
+    "source_protocol": "full_dataset_grouped_oof",
+    "threshold": 0.0023280164416682103
+  },
+  "schema_version": 1,
+  "target": {
+    "definition": "Detection of deliberately inconsistent or corrupted ZIP local-header, central-directory, or end-of-central-directory metadata intended to hide archive entries from archive-aware scanners. A positive label does not assert that the payload is malware.",
+    "id": "zip_structural_evasion"
+  },
+  "threshold": 0.0023280164416682103,
+  "training_dataset": {
+    "attack_variant_counts": {
+      "A_classic": 350,
+      "B_method_only": 100,
+      "C_gootloader": 150,
+      "D_multifile": 150,
+      "E_crc_mismatch": 100,
+      "F_extra_noise": 100,
+      "G_high_compression": 100,
+      "H_size_mismatch": 100
+    },
+    "benign_feature_row_composition": {
+      "hard_negative": 478,
+      "office_sample": 4,
+      "pypi_archive": 686,
+      "small_benign": 400
+    },
+    "benign_rows": 1568,
+    "dataset_manifest_sha256": "f99ce4b4b61db50eb6153d8c8858a851a29be041c04d90749d1bbec16e9febae",
+    "excluded": {
+      "other_non_target_positive_rows": 0,
+      "stray_test_rows": 0,
+      "total_excluded_rows": 0,
+      "untrusted_source_rows": 0
+    },
+    "features_csv_sha256": "8660984f0fe32658bcbe1d7b2748ce40e5c69890fb5cb901a0579585a62aeeed",
+    "included_rows": 2718,
+    "labels_csv_sha256": "9df41354a04eb6fdb332768bf0194d94eafba4b1aeb7468cf7e005678b14b2fd",
+    "raw_feature_rows": 2718,
+    "raw_label_rows": 2718,
+    "synthetic_positive_rows": 1150
+  },
+  "training_scope": "synthetic_positive_benchmark"
+}

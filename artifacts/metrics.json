@@ -1,0 +1,667 @@
+{
+  "dataset": {
+    "attack_variant_counts": {
+      "A_classic": 350,
+      "B_method_only": 100,
+      "C_gootloader": 150,
+      "D_multifile": 150,
+      "E_crc_mismatch": 100,
+      "F_extra_noise": 100,
+      "G_high_compression": 100,
+      "H_size_mismatch": 100
+    },
+    "benign_feature_row_composition": {
+      "hard_negative": 478,
+      "office_sample": 4,
+      "pypi_archive": 686,
+      "small_benign": 400
+    },
+    "benign_rows": 1568,
+    "dataset_manifest_sha256": "f99ce4b4b61db50eb6153d8c8858a851a29be041c04d90749d1bbec16e9febae",
+    "excluded": {
+      "other_non_target_positive_rows": 0,
+      "stray_test_rows": 0,
+      "total_excluded_rows": 0,
+      "untrusted_source_rows": 0
+    },
+    "features_csv_sha256": "8660984f0fe32658bcbe1d7b2748ce40e5c69890fb5cb901a0579585a62aeeed",
+    "included_rows": 2718,
+    "labels_csv_sha256": "9df41354a04eb6fdb332768bf0194d94eafba4b1aeb7468cf7e005678b14b2fd",
+    "raw_feature_rows": 2718,
+    "raw_label_rows": 2718,
+    "synthetic_positive_rows": 1150
+  },
+  "evaluation": {
+    "aggregate_synthetic_metrics": {
+      "accuracy": 0.9988962472406181,
+      "f1": 0.998697351280938,
+      "false_negative_rate": 0.0,
+      "false_positive_rate": 0.001913265306122449,
+      "fn": 0,
+      "fp": 3,
+      "precision": 0.997398091934085,
+      "recall": 1.0,
+      "roc_auc": 0.9990017746228926,
+      "tn": 1565,
+      "tp": 1150
+    },
+    "confidence_interval_unit": "benchmark_row",
+    "confidence_intervals_95_wilson": {
+      "accuracy": [
+        0.996759709446953,
+        0.9996245550410462
+      ],
+      "false_positive_rate": [
+        0.0006508914968755292,
+        0.005610209942755589
+      ],
+      "precision": [
+        0.9923780892331094,
+        0.9991147305083902
+      ],
+      "recall": [
+        0.9966707221418267,
+        1.0
+      ]
+    },
+    "decision_policy": {
+      "benign_false_positive_rate_budget": 0.005,
+      "benign_score_quantile": 0.995,
+      "id": "nested_grouped_oof_benign_quantile_v1",
+      "method": "next_float_above_higher_empirical_benign_quantile",
+      "score_semantics": "uncalibrated_lightgbm_score"
+    },
+    "description": "Each generated positive variant is held out in full. Each outer threshold is calibrated only from grouped inner OOF scores on that outer fold's training rows.",
+    "folds": [
+      {
+        "attack_variant_overlap": [],
+        "calibration": {
+          "achieved_benign_false_positive_rate": 0.004373177842565598,
+          "benign_exceedances": 6,
+          "benign_false_positive_rate_budget": 0.005,
+          "benign_rows": 1372,
+          "benign_score_quantile": 0.995,
+          "id": "nested_grouped_oof_benign_quantile_v1",
+          "inner_attack_variants": [
+            "B_method_only",
+            "C_gootloader",
+            "D_multifile",
+            "E_crc_mismatch",
+            "F_extra_noise",
+            "G_high_compression",
+            "H_size_mismatch"
+          ],
+          "inner_coverage_complete": true,
+          "inner_fold_count": 7,
+          "inner_oof_rows": 2172,
+          "inner_positive_rows": 800,
+          "inner_rows": 2172,
+          "method": "next_float_above_higher_empirical_benign_quantile",
+          "outer_test_rows_used": 0,
+          "score_semantics": "uncalibrated_lightgbm_score",
+          "source_protocol": "grouped_inner_oof_on_outer_training_rows",
+          "threshold": 0.002448269025546886
+        },
+        "fold": 1,
+        "held_out_attack_variant": "A_classic",
+        "metrics": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "fn": 0,
+          "fp": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "roc_auc": 1.0,
+          "tn": 196,
+          "tp": 350
+        },
+        "test_attack_variants": [
+          "A_classic"
+        ],
+        "test_benign_rows": 196,
+        "test_rows": 546,
+        "test_synthetic_positive_rows": 350,
+        "threshold": 0.002448269025546886,
+        "train_attack_variants": [
+          "B_method_only",
+          "C_gootloader",
+          "D_multifile",
+          "E_crc_mismatch",
+          "F_extra_noise",
+          "G_high_compression",
+          "H_size_mismatch"
+        ],
+        "train_benign_rows": 1372,
+        "train_rows": 2172,
+        "train_synthetic_positive_rows": 800
+      },
+      {
+        "attack_variant_overlap": [],
+        "calibration": {
+          "achieved_benign_false_positive_rate": 0.004373177842565598,
+          "benign_exceedances": 6,
+          "benign_false_positive_rate_budget": 0.005,
+          "benign_rows": 1372,
+          "benign_score_quantile": 0.995,
+          "id": "nested_grouped_oof_benign_quantile_v1",
+          "inner_attack_variants": [
+            "A_classic",
+            "C_gootloader",
+            "D_multifile",
+            "E_crc_mismatch",
+            "F_extra_noise",
+            "G_high_compression",
+            "H_size_mismatch"
+          ],
+          "inner_coverage_complete": true,
+          "inner_fold_count": 7,
+          "inner_oof_rows": 2422,
+          "inner_positive_rows": 1050,
+          "inner_rows": 2422,
+          "method": "next_float_above_higher_empirical_benign_quantile",
+          "outer_test_rows_used": 0,
+          "score_semantics": "uncalibrated_lightgbm_score",
+          "source_protocol": "grouped_inner_oof_on_outer_training_rows",
+          "threshold": 0.0026067240421502606
+        },
+        "fold": 2,
+        "held_out_attack_variant": "B_method_only",
+        "metrics": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "fn": 0,
+          "fp": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "roc_auc": 1.0,
+          "tn": 196,
+          "tp": 100
+        },
+        "test_attack_variants": [
+          "B_method_only"
+        ],
+        "test_benign_rows": 196,
+        "test_rows": 296,
+        "test_synthetic_positive_rows": 100,
+        "threshold": 0.0026067240421502606,
+        "train_attack_variants": [
+          "A_classic",
+          "C_gootloader",
+          "D_multifile",
+          "E_crc_mismatch",
+          "F_extra_noise",
+          "G_high_compression",
+          "H_size_mismatch"
+        ],
+        "train_benign_rows": 1372,
+        "train_rows": 2422,
+        "train_synthetic_positive_rows": 1050
+      },
+      {
+        "attack_variant_overlap": [],
+        "calibration": {
+          "achieved_benign_false_positive_rate": 0.004373177842565598,
+          "benign_exceedances": 6,
+          "benign_false_positive_rate_budget": 0.005,
+          "benign_rows": 1372,
+          "benign_score_quantile": 0.995,
+          "id": "nested_grouped_oof_benign_quantile_v1",
+          "inner_attack_variants": [
+            "A_classic",
+            "B_method_only",
+            "D_multifile",
+            "E_crc_mismatch",
+            "F_extra_noise",
+            "G_high_compression",
+            "H_size_mismatch"
+          ],
+          "inner_coverage_complete": true,
+          "inner_fold_count": 7,
+          "inner_oof_rows": 2372,
+          "inner_positive_rows": 1000,
+          "inner_rows": 2372,
+          "method": "next_float_above_higher_empirical_benign_quantile",
+          "outer_test_rows_used": 0,
+          "score_semantics": "uncalibrated_lightgbm_score",
+          "source_protocol": "grouped_inner_oof_on_outer_training_rows",
+          "threshold": 0.0028007258543215306
+        },
+        "fold": 3,
+        "held_out_attack_variant": "C_gootloader",
+        "metrics": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "fn": 0,
+          "fp": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "roc_auc": 1.0,
+          "tn": 196,
+          "tp": 150
+        },
+        "test_attack_variants": [
+          "C_gootloader"
+        ],
+        "test_benign_rows": 196,
+        "test_rows": 346,
+        "test_synthetic_positive_rows": 150,
+        "threshold": 0.0028007258543215306,
+        "train_attack_variants": [
+          "A_classic",
+          "B_method_only",
+          "D_multifile",
+          "E_crc_mismatch",
+          "F_extra_noise",
+          "G_high_compression",
+          "H_size_mismatch"
+        ],
+        "train_benign_rows": 1372,
+        "train_rows": 2372,
+        "train_synthetic_positive_rows": 1000
+      },
+      {
+        "attack_variant_overlap": [],
+        "calibration": {
+          "achieved_benign_false_positive_rate": 0.0036443148688046646,
+          "benign_exceedances": 5,
+          "benign_false_positive_rate_budget": 0.005,
+          "benign_rows": 1372,
+          "benign_score_quantile": 0.995,
+          "id": "nested_grouped_oof_benign_quantile_v1",
+          "inner_attack_variants": [
+            "A_classic",
+            "B_method_only",
+            "C_gootloader",
+            "E_crc_mismatch",
+            "F_extra_noise",
+            "G_high_compression",
+            "H_size_mismatch"
+          ],
+          "inner_coverage_complete": true,
+          "inner_fold_count": 7,
+          "inner_oof_rows": 2372,
+          "inner_positive_rows": 1000,
+          "inner_rows": 2372,
+          "method": "next_float_above_higher_empirical_benign_quantile",
+          "outer_test_rows_used": 0,
+          "score_semantics": "uncalibrated_lightgbm_score",
+          "source_protocol": "grouped_inner_oof_on_outer_training_rows",
+          "threshold": 0.00015876057269938873
+        },
+        "fold": 4,
+        "held_out_attack_variant": "D_multifile",
+        "metrics": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "fn": 0,
+          "fp": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "roc_auc": 1.0,
+          "tn": 196,
+          "tp": 150
+        },
+        "test_attack_variants": [
+          "D_multifile"
+        ],
+        "test_benign_rows": 196,
+        "test_rows": 346,
+        "test_synthetic_positive_rows": 150,
+        "threshold": 0.00015876057269938873,
+        "train_attack_variants": [
+          "A_classic",
+          "B_method_only",
+          "C_gootloader",
+          "E_crc_mismatch",
+          "F_extra_noise",
+          "G_high_compression",
+          "H_size_mismatch"
+        ],
+        "train_benign_rows": 1372,
+        "train_rows": 2372,
+        "train_synthetic_positive_rows": 1000
+      },
+      {
+        "attack_variant_overlap": [],
+        "calibration": {
+          "achieved_benign_false_positive_rate": 0.004373177842565598,
+          "benign_exceedances": 6,
+          "benign_false_positive_rate_budget": 0.005,
+          "benign_rows": 1372,
+          "benign_score_quantile": 0.995,
+          "id": "nested_grouped_oof_benign_quantile_v1",
+          "inner_attack_variants": [
+            "A_classic",
+            "B_method_only",
+            "C_gootloader",
+            "D_multifile",
+            "F_extra_noise",
+            "G_high_compression",
+            "H_size_mismatch"
+          ],
+          "inner_coverage_complete": true,
+          "inner_fold_count": 7,
+          "inner_oof_rows": 2422,
+          "inner_positive_rows": 1050,
+          "inner_rows": 2422,
+          "method": "next_float_above_higher_empirical_benign_quantile",
+          "outer_test_rows_used": 0,
+          "score_semantics": "uncalibrated_lightgbm_score",
+          "source_protocol": "grouped_inner_oof_on_outer_training_rows",
+          "threshold": 0.0026176486662450836
+        },
+        "fold": 5,
+        "held_out_attack_variant": "E_crc_mismatch",
+        "metrics": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "fn": 0,
+          "fp": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "roc_auc": 1.0,
+          "tn": 196,
+          "tp": 100
+        },
+        "test_attack_variants": [
+          "E_crc_mismatch"
+        ],
+        "test_benign_rows": 196,
+        "test_rows": 296,
+        "test_synthetic_positive_rows": 100,
+        "threshold": 0.0026176486662450836,
+        "train_attack_variants": [
+          "A_classic",
+          "B_method_only",
+          "C_gootloader",
+          "D_multifile",
+          "F_extra_noise",
+          "G_high_compression",
+          "H_size_mismatch"
+        ],
+        "train_benign_rows": 1372,
+        "train_rows": 2422,
+        "train_synthetic_positive_rows": 1050
+      },
+      {
+        "attack_variant_overlap": [],
+        "calibration": {
+          "achieved_benign_false_positive_rate": 0.004373177842565598,
+          "benign_exceedances": 6,
+          "benign_false_positive_rate_budget": 0.005,
+          "benign_rows": 1372,
+          "benign_score_quantile": 0.995,
+          "id": "nested_grouped_oof_benign_quantile_v1",
+          "inner_attack_variants": [
+            "A_classic",
+            "B_method_only",
+            "C_gootloader",
+            "D_multifile",
+            "E_crc_mismatch",
+            "G_high_compression",
+            "H_size_mismatch"
+          ],
+          "inner_coverage_complete": true,
+          "inner_fold_count": 7,
+          "inner_oof_rows": 2422,
+          "inner_positive_rows": 1050,
+          "inner_rows": 2422,
+          "method": "next_float_above_higher_empirical_benign_quantile",
+          "outer_test_rows_used": 0,
+          "score_semantics": "uncalibrated_lightgbm_score",
+          "source_protocol": "grouped_inner_oof_on_outer_training_rows",
+          "threshold": 0.0035179648335127876
+        },
+        "fold": 6,
+        "held_out_attack_variant": "F_extra_noise",
+        "metrics": {
+          "accuracy": 0.9898648648648649,
+          "f1": 0.9852216748768473,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.015306122448979591,
+          "fn": 0,
+          "fp": 3,
+          "precision": 0.970873786407767,
+          "recall": 1.0,
+          "roc_auc": 1.0,
+          "tn": 193,
+          "tp": 100
+        },
+        "test_attack_variants": [
+          "F_extra_noise"
+        ],
+        "test_benign_rows": 196,
+        "test_rows": 296,
+        "test_synthetic_positive_rows": 100,
+        "threshold": 0.0035179648335127876,
+        "train_attack_variants": [
+          "A_classic",
+          "B_method_only",
+          "C_gootloader",
+          "D_multifile",
+          "E_crc_mismatch",
+          "G_high_compression",
+          "H_size_mismatch"
+        ],
+        "train_benign_rows": 1372,
+        "train_rows": 2422,
+        "train_synthetic_positive_rows": 1050
+      },
+      {
+        "attack_variant_overlap": [],
+        "calibration": {
+          "achieved_benign_false_positive_rate": 0.0036443148688046646,
+          "benign_exceedances": 5,
+          "benign_false_positive_rate_budget": 0.005,
+          "benign_rows": 1372,
+          "benign_score_quantile": 0.995,
+          "id": "nested_grouped_oof_benign_quantile_v1",
+          "inner_attack_variants": [
+            "A_classic",
+            "B_method_only",
+            "C_gootloader",
+            "D_multifile",
+            "E_crc_mismatch",
+            "F_extra_noise",
+            "H_size_mismatch"
+          ],
+          "inner_coverage_complete": true,
+          "inner_fold_count": 7,
+          "inner_oof_rows": 2422,
+          "inner_positive_rows": 1050,
+          "inner_rows": 2422,
+          "method": "next_float_above_higher_empirical_benign_quantile",
+          "outer_test_rows_used": 0,
+          "score_semantics": "uncalibrated_lightgbm_score",
+          "source_protocol": "grouped_inner_oof_on_outer_training_rows",
+          "threshold": 0.0032006632126803506
+        },
+        "fold": 7,
+        "held_out_attack_variant": "G_high_compression",
+        "metrics": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "fn": 0,
+          "fp": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "roc_auc": 1.0,
+          "tn": 196,
+          "tp": 100
+        },
+        "test_attack_variants": [
+          "G_high_compression"
+        ],
+        "test_benign_rows": 196,
+        "test_rows": 296,
+        "test_synthetic_positive_rows": 100,
+        "threshold": 0.0032006632126803506,
+        "train_attack_variants": [
+          "A_classic",
+          "B_method_only",
+          "C_gootloader",
+          "D_multifile",
+          "E_crc_mismatch",
+          "F_extra_noise",
+          "H_size_mismatch"
+        ],
+        "train_benign_rows": 1372,
+        "train_rows": 2422,
+        "train_synthetic_positive_rows": 1050
+      },
+      {
+        "attack_variant_overlap": [],
+        "calibration": {
+          "achieved_benign_false_positive_rate": 0.004373177842565598,
+          "benign_exceedances": 6,
+          "benign_false_positive_rate_budget": 0.005,
+          "benign_rows": 1372,
+          "benign_score_quantile": 0.995,
+          "id": "nested_grouped_oof_benign_quantile_v1",
+          "inner_attack_variants": [
+            "A_classic",
+            "B_method_only",
+            "C_gootloader",
+            "D_multifile",
+            "E_crc_mismatch",
+            "F_extra_noise",
+            "G_high_compression"
+          ],
+          "inner_coverage_complete": true,
+          "inner_fold_count": 7,
+          "inner_oof_rows": 2422,
+          "inner_positive_rows": 1050,
+          "inner_rows": 2422,
+          "method": "next_float_above_higher_empirical_benign_quantile",
+          "outer_test_rows_used": 0,
+          "score_semantics": "uncalibrated_lightgbm_score",
+          "source_protocol": "grouped_inner_oof_on_outer_training_rows",
+          "threshold": 0.0029767043048562103
+        },
+        "fold": 8,
+        "held_out_attack_variant": "H_size_mismatch",
+        "metrics": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "fn": 0,
+          "fp": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "roc_auc": 1.0,
+          "tn": 196,
+          "tp": 100
+        },
+        "test_attack_variants": [
+          "H_size_mismatch"
+        ],
+        "test_benign_rows": 196,
+        "test_rows": 296,
+        "test_synthetic_positive_rows": 100,
+        "threshold": 0.0029767043048562103,
+        "train_attack_variants": [
+          "A_classic",
+          "B_method_only",
+          "C_gootloader",
+          "D_multifile",
+          "E_crc_mismatch",
+          "F_extra_noise",
+          "G_high_compression"
+        ],
+        "train_benign_rows": 1372,
+        "train_rows": 2422,
+        "train_synthetic_positive_rows": 1050
+      }
+    ],
+    "leakage_check_passed": true,
+    "out_of_fold_rows": 2718,
+    "protocol": "nested_leave_one_generated_attack_variant_out",
+    "random_state": 42,
+    "release_calibration": {
+      "achieved_benign_false_positive_rate": 0.004464285714285714,
+      "attack_variants": [
+        "A_classic",
+        "B_method_only",
+        "C_gootloader",
+        "D_multifile",
+        "E_crc_mismatch",
+        "F_extra_noise",
+        "G_high_compression",
+        "H_size_mismatch"
+      ],
+      "benign_exceedances": 7,
+      "benign_false_positive_rate_budget": 0.005,
+      "benign_rows": 1568,
+      "benign_score_quantile": 0.995,
+      "coverage_complete": true,
+      "fold_count": 8,
+      "id": "nested_grouped_oof_benign_quantile_v1",
+      "method": "next_float_above_higher_empirical_benign_quantile",
+      "oof_rows": 2718,
+      "positive_rows": 1150,
+      "score_semantics": "uncalibrated_lightgbm_score",
+      "source_protocol": "full_dataset_grouped_oof",
+      "threshold": 0.0023280164416682103
+    },
+    "release_threshold": 0.0023280164416682103
+  },
+  "extractor_feature_schema_version": "2.0.0",
+  "feature_names": [
+    "lf_compression_method",
+    "cd_compression_method",
+    "method_mismatch",
+    "data_entropy_shannon",
+    "data_entropy_renyi",
+    "declared_vs_entropy_flag",
+    "eocd_count",
+    "lf_unknown_method",
+    "suspicious_entry_count",
+    "suspicious_entry_ratio",
+    "any_crc_mismatch",
+    "is_encrypted"
+  ],
+  "limitations": [
+    "These metrics measure generated structural-evasion variants only.",
+    "They do not measure malware detection or payload maliciousness.",
+    "The 1,568 negative examples are benign-labeled legacy feature rows (686 PyPI archives, 478 hard negatives, 400 small benign fixtures, 4 office samples); their raw archives are absent, so they cannot be re-extracted with the current parser.",
+    "No independently labeled real-world structural-evasion corpus is included.",
+    "Decision thresholds use a fixed development 0.5% benign-FPR budget and grouped training-only calibration; they are not probability calibration.",
+    "Wilson intervals are row-level binomial benchmark intervals; they do not account for correlation among generated samples or sources."
+  ],
+  "model": {
+    "artifact_format": "lightgbm_booster_text",
+    "calibration_policy": {
+      "benign_false_positive_rate_budget": 0.005,
+      "benign_score_quantile": 0.995,
+      "id": "nested_grouped_oof_benign_quantile_v1",
+      "method": "next_float_above_higher_empirical_benign_quantile",
+      "score_semantics": "uncalibrated_lightgbm_score"
+    },
+    "metadata_sha256": "7f93bcd6f4be91e5ec06db50589c44dec2e2695225103e40ba031321d7932a0c",
+    "model_sha256": "ae526c3fb87be842028b2528c630059c045a69490b4ba7628ff1b225a59ae507",
+    "threshold": 0.0023280164416682103,
+    "training_rows": 2718,
+    "verification_note": "The committed native model is schema-checked and SHA-256 verified. Dataset and evaluation results are deterministically recomputed; model text bytes are not compared with a retrain because LightGBM serialization may be platform-sensitive."
+  },
+  "schema_version": 1,
+  "scope": "synthetic_positive_benchmark",
+  "target": {
+    "definition": "Detection of deliberately inconsistent or corrupted ZIP local-header, central-directory, or end-of-central-directory metadata intended to hide archive entries from archive-aware scanners. A positive label does not assert that the payload is malware.",
+    "id": "zip_structural_evasion",
+    "negative_class": "benign ZIP-compatible archives",
+    "positive_class": "generated ZIP structural-evasion variants"
+  }
+}

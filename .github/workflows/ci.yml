@@ -1,0 +1,171 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project and development tools
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Lint maintained code
+        run: python -m ruff check src tests data/scripts scripts
+
+      - name: Audit installed dependencies
+        run: python -m pip_audit --skip-editable
+
+      - name: Scan production code for security issues
+        run: python -m bandit -r src/zombieguard -q
+
+      - name: Compile Python sources
+        run: python -m compileall -q src tests data/scripts scripts
+
+  test-and-build:
+    name: Test and build (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project and development tools
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Run tests
+        run: >-
+          python -m pytest
+          --cov=zombieguard.entropy
+          --cov=zombieguard.extractor
+          --cov=zombieguard.classifier
+          --cov=zombieguard.detector
+          --cov-report=term-missing
+          --cov-fail-under=75
+
+      - name: Build source and wheel distributions
+        run: python -m build
+
+      - name: Verify wheel contents
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from pathlib import PurePosixPath
+          from tarfile import open as open_tar
+          from zipfile import ZipFile
+
+          wheels = list(Path("dist").glob("*.whl"))
+          if len(wheels) != 1:
+              raise SystemExit(f"expected one wheel, found: {wheels}")
+          with ZipFile(wheels[0]) as archive:
+              names = set(archive.namelist())
+          required = {
+              "zombieguard/assets/zombieguard_lgbm.txt",
+              "zombieguard/assets/zombieguard_lgbm.metadata.json",
+          }
+          missing = sorted(required - names)
+          if missing:
+              raise SystemExit(f"wheel is missing release assets: {missing}")
+          leaked = sorted(
+              name for name in names
+              if name.startswith(("artifacts/", "data/", "docs/", "scripts/", "tests/"))
+          )
+          if leaked:
+              raise SystemExit(f"wheel contains source-only files: {leaked[:5]}")
+
+          sdists = list(Path("dist").glob("*.tar.gz"))
+          if len(sdists) != 1:
+              raise SystemExit(f"expected one sdist, found: {sdists}")
+          with open_tar(sdists[0], "r:gz") as archive:
+              sdist_names = {
+                  PurePosixPath(*PurePosixPath(name).parts[1:]).as_posix()
+                  for name in archive.getnames()
+              }
+          required_sdist = {
+              "artifacts/metrics.json",
+              "data/processed/features.csv",
+              "data/processed/labels.csv",
+              "data/processed/dataset_manifest.json",
+              "data/scripts/generate_zombie_samples.py",
+              "docs/DATA_CARD.md",
+              "docs/MODEL_CARD.md",
+              "scripts/curate_dataset.py",
+              "scripts/refresh_synthetic_features.py",
+              "tests/test_extractor.py",
+          }
+          missing_sdist = sorted(required_sdist - sdist_names)
+          if missing_sdist:
+              raise SystemExit(f"sdist is missing reproducibility files: {missing_sdist}")
+          print(f"Verified wheel {wheels[0].name} and sdist {sdists[0].name}")
+          PY
+
+  evaluation-smoke:
+    name: Reproducible evaluation smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [quality]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project
+        run: python -m pip install --upgrade pip && python -m pip install -e .
+
+      - name: Regenerate safe synthetic positives
+        run: python data/scripts/generate_zombie_samples.py
+
+      - name: Verify current-parser feature snapshot
+        run: python scripts/refresh_synthetic_features.py
+
+      - name: Verify committed artifacts
+        run: python -m zombieguard.evaluate --check
+
+      - name: Train and validate temporary artifacts
+        run: >-
+          python -m zombieguard.evaluate --train --check
+          --model-out "${RUNNER_TEMP}/zombieguard_lgbm.txt"
+          --metrics-out "${RUNNER_TEMP}/metrics.json"
+
+      - name: Ensure smoke test did not modify tracked files
+        run: git diff --exit-code

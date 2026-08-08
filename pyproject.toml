@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zombieguard"
+version = "1.1.0"
+description = "Defensive detection of structural metadata evasion in ZIP archives"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Shoaib Uddin" },
+]
+keywords = ["zip", "security", "archive", "evasion", "malware-analysis"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+]
+dependencies = [
+  "lightgbm==4.7.0",
+  "numpy==2.4.2",
+  "pandas==2.3.3",
+  "scikit-learn==1.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "bandit>=1.9,<2",
+  "build>=1.2,<2",
+  "pip-audit>=2.9,<3",
+  "pytest>=9.0.3,<10",
+  "pytest-cov>=6,<8",
+  "ruff>=0.9,<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/mdshoaibuddinchanda/zombieguard"
+Issues = "https://github.com/mdshoaibuddinchanda/zombieguard/issues"
+Repository = "https://github.com/mdshoaibuddinchanda/zombieguard"
+
+[project.scripts]
+zombieguard = "zombieguard.detector:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["zombieguard", "zombieguard.*"]
+
+[tool.setuptools.package-data]
+zombieguard = ["assets/*.json", "assets/*.txt"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["zombieguard"]
+omit = [
+  "src/zombieguard/evaluate.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
+]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+  "data/raw",
+  "dist",
+  "build",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]

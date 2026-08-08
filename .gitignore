@@ -1,123 +1,77 @@
-# ─────────────────────────────────────────────
-# Python
-# ─────────────────────────────────────────────
+# Python bytecode and environments
 __pycache__/
 *.py[cod]
-*.pyo
+*.pyd
 *.so
-.env
+.python-version
 .venv/
 venv/
 env/
-ENV/
 
-# ─────────────────────────────────────────────
-# IDE / OS
-# ─────────────────────────────────────────────
+# Packaging and test output
+*.egg-info/
+build/
+dist/
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+
+# Editors and operating systems
 .DS_Store
 Thumbs.db
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
 
-# ─────────────────────────────────────────────
-# Test / lint caches
-# ─────────────────────────────────────────────
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-build/
-dist/
-.ipynb_checkpoints/
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
 
-# ─────────────────────────────────────────────
-# Logs and temp files
-# ─────────────────────────────────────────────
+# Logs and temporary output
 *.log
 *.tmp
 *.bak
 detector_batch_output.txt
 
-# ─────────────────────────────────────────────
-# DATA — malware samples and large datasets
-# Never push actual malware or large binary data.
-# ─────────────────────────────────────────────
-
-# Raw training data (synthetic malicious + benign ZIPs)
-data/raw/
-
-# Real malware samples from MalwareBazaar
-data/real_world_validation/
-
-# Real-world split directories (derived from real malware)
-data/real_splits/
-
-# Hard test set (contains real malware samples)
-data/hard_test/
-
-# Generalisation study archives (APK, RAR, 7z)
-data/generalisation/
-
-# Benign real-world ZIPs (large, regenerable)
-data/benign_realworld/
-
-# Operational download/resume state files
-data/download_progress.json
-data/timestamp_progress.json
-data/benign_fp_progress.json
-data/benign_fp_results.csv
-data/benign_fp_summary.txt
-data/realworld_splits.csv
-
-# Feature extraction cache (auto-rebuilt by temporal_stability.py)
-data/temporal_features_cache.csv
-
-# ─────────────────────────────────────────────
-# DATA — what IS tracked
-# ─────────────────────────────────────────────
-
-# Canonical processed feature matrix (source of truth for training)
-# data/processed/features.csv  ← tracked
-# data/processed/labels.csv    ← tracked
-data/processed/*
-!data/processed/features.csv
-!data/processed/labels.csv
-
-# MalwareBazaar timestamp metadata (no malware content, just dates)
-# data/bazaar_timestamps.csv   ← tracked
-
-# data/scripts/                ← tracked (all pipeline code)
-
-# ─────────────────────────────────────────────
-# MODELS — large binary files, not tracked
-# ─────────────────────────────────────────────
-models/*.pkl
-models/*.joblib
-models/*.pt
-
-# ─────────────────────────────────────────────
-# PAPER FIGURES
-# CSV source tables → tracked (version-controlled data)
-# PNG / PDF outputs → NOT tracked (regenerate with generate_all_figures.py)
-# ─────────────────────────────────────────────
+# Generated research output. The release metrics remain versioned.
+artifacts/*
+!artifacts/.gitkeep
+!artifacts/metrics.json
 paper/figures/png/
 paper/figures/pdf/
 
-# Also exclude any stray image files at the flat figures/ level
-paper/figures/*.png
-paper/figures/*.pdf
-paper/figures/*.svg
-paper/figures/*.jpg
-paper/figures/*.jpeg
+# Trained scratch models. Release models are package assets in src/zombieguard/assets/.
+models/
+*.joblib
+*.pkl
+*.pt
+*.pth
 
-# ─────────────────────────────────────────────
-# ZIP files — never push sample data
-# ─────────────────────────────────────────────
-*.zip
-*.rar
-*.7z
-*.apk
+# Potentially unsafe, private, or regenerable archive corpora.
+# Safe regression fixtures under tests/fixtures are intentionally allowed.
+data/raw/
+data/real_world_validation/
+data/real_splits/
+data/hard_test/
+data/generalisation/
+data/benign_realworld/
+data/adversarial_temp/
+data/quarantine/
+samples/malicious/
+samples/private/
+
+# Downloader state and local derived caches
+data/*_progress.json
+data/*_cache.csv
+data/realworld_splits.csv

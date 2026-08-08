@@ -1,23 +1,19 @@
-"""
-generate_zombie_samples.py
-Generates diverse synthetic Zombie ZIP samples across 8 structural variant types.
-Designed to mirror real-world attacker behavior documented in:
-- CVE-2026-0866 (Zombie ZIP)
-- Gootloader campaign analysis
-- BadPack APK research (Palo Alto Unit42)
+"""Generate deterministic, inert ZIP-header evasion fixtures.
+
+The files exercise eight structural inconsistency patterns. Payloads are
+synthetic bytes only; this script never downloads or embeds malware.
 """
 
-import os
-import struct
-import zlib
 import bz2
 import random
 import string
-import hashlib
+import struct
+import zlib
 from pathlib import Path
 
-OUTPUT_DIR = "data/raw/malicious"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+ROOT = Path(__file__).resolve().parents[2]
+OUTPUT_DIR = ROOT / "data" / "raw" / "malicious"
+DEFAULT_SEED = 42
 
 # -- ZIP constants ------------------------------------------------------------
 SIG_LFH = b"PK\x03\x04"
@@ -113,14 +109,19 @@ def _compress_bzip2(data: bytes) -> bytes:
 # -- Payload generators -------------------------------------------------------
 
 def payload_eicar(variant: int = 0) -> bytes:
-    """EICAR-style test string with variant suffix."""
+    """Inert antivirus-test-style marker with a variant suffix."""
     base = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$ZOMBIE-TEST-FILE!$H+H*"
     return base + f"_v{variant}".encode()
 
 
+def _random_bytes(size: int) -> bytes:
+    """Return deterministic pseudo-random bytes after the generator is seeded."""
+    return bytes(random.getrandbits(8) for _ in range(size))
+
+
 def payload_random_binary(size: int) -> bytes:
-    """High-entropy random bytes - simulates encrypted/packed malware."""
-    return os.urandom(size)
+    """High-entropy deterministic bytes representing opaque content."""
+    return _random_bytes(size)
 
 
 def payload_repetitive(size: int) -> bytes:
@@ -132,7 +133,7 @@ def payload_repetitive(size: int) -> bytes:
 def payload_pe_header_lure() -> bytes:
     """Starts with MZ header (PE executable signature) followed by random bytes."""
     mz = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xFF\xFF\x00\x00"
-    return mz + os.urandom(random.randint(512, 4096))
+    return mz + _random_bytes(random.randint(512, 4096))
 
 
 def payload_script_lure() -> bytes:
@@ -187,7 +188,7 @@ def add_decoy_entries_raw(zombie_zip_bytes: bytes, count: int = None) -> bytes:
     """
     Append benign decoy entries at the binary level without rewriting originals.
 
-    This preserves malicious LFH/CDH mismatches by avoiding zipfile-based copying.
+    This preserves intentional LFH/CDH mismatches by avoiding zipfile-based copying.
     """
     if count is None:
         count = random.randint(5, 50)
@@ -201,13 +202,28 @@ def add_decoy_entries_raw(zombie_zip_bytes: bytes, count: int = None) -> bytes:
     except struct.error:
         return zombie_zip_bytes
 
-    _, _, _, _, entries_total, _, cd_offset, _ = eocd_fields
+    (
+        _,
+        _,
+        _,
+        _,
+        entries_total,
+        central_size,
+        cd_offset,
+        comment_length,
+    ) = eocd_fields
 
-    if cd_offset > len(zombie_zip_bytes) or cd_offset > eocd_pos:
+    central_start = eocd_pos - central_size
+    archive_base = central_start - cd_offset
+    if archive_base < 0 or central_start < archive_base:
         return zombie_zip_bytes
 
-    local_section = zombie_zip_bytes[:cd_offset]
-    cd_section = zombie_zip_bytes[cd_offset:eocd_pos]
+    # Offsets stored in a ZIP are relative to that archive, not necessarily to
+    # byte zero of a concatenated file. Preserve any preceding archive chain.
+    prefix = zombie_zip_bytes[:archive_base]
+    local_section = zombie_zip_bytes[archive_base:central_start]
+    cd_section = zombie_zip_bytes[central_start:eocd_pos]
+    comment = zombie_zip_bytes[eocd_pos + 22 : eocd_pos + 22 + comment_length]
 
     decoy_filenames = [
         "readme.txt",
@@ -315,20 +331,20 @@ def add_decoy_entries_raw(zombie_zip_bytes: bytes, count: int = None) -> bytes:
         new_total_entries,
         len(new_cd_section),
         new_cd_offset,
-        0,
+        len(comment),
     )
 
-    return new_local_section + new_cd_section + new_eocd
+    return prefix + new_local_section + new_cd_section + new_eocd + comment
 
 
 # -- Variant builders ---------------------------------------------------------
 
 def variant_classic_zombie(filepath: str):
     """
-    VARIANT A - Classic Zombie ZIP (CVE-2026-0866 original)
+    VARIANT A - Classic local/central header method desynchronization.
     LFH declares STORE (0), CDH declares DEFLATE (8).
     Actual data is DEFLATE compressed.
-    This is the original attack described in the CVE.
+    This models an archive whose local and central directory methods disagree.
     """
     payload = random.choice(
         [
@@ -375,10 +391,9 @@ def variant_method_only_mismatch(filepath: str):
 
 def variant_gootloader_concat(filepath: str, chain_len: int = None):
     """
-    VARIANT C - Gootloader-style concatenated ZIPs
-    Multiple valid ZIPs concatenated - EOCD count > 1.
-    Security tools only parse the first ZIP and miss payloads in later ones.
-    Based on: in-the-wild Gootloader campaign analysis (March 2026).
+    VARIANT C - Concatenated ZIP records (legacy ID: ``C_gootloader``).
+    Multiple independently valid ZIP records are concatenated, producing an
+    EOCD count greater than one and exercising parser-differential handling.
     """
     if chain_len is None:
         chain_len = random.randint(2, 8)
@@ -386,7 +401,7 @@ def variant_gootloader_concat(filepath: str, chain_len: int = None):
     blob = b""
     for i in range(chain_len):
         if i == chain_len - 1:
-            # Last ZIP contains the actual malicious payload
+            # The last ZIP contains the inert target payload.
             payload = payload_pe_header_lure()
             compressed = _compress_deflate(payload)
             crc = zlib.crc32(payload) & 0xFFFFFFFF
@@ -413,9 +428,9 @@ def variant_gootloader_concat(filepath: str, chain_len: int = None):
 
 def variant_multi_file_zip(filepath: str):
     """
-    VARIANT D - Multi-file ZIP with one malicious entry hidden among benign files
-    Realistic delivery: attacker includes decoy files to look legitimate.
-    Only the hidden payload file has the header mismatch.
+    VARIANT D - Multi-file ZIP with one structurally inconsistent target entry.
+    Decoy entries exercise whether analysis covers more than the first record.
+    Only the inert target entry has the header mismatch.
     """
     entries_local = b""
     entries_cd = b""
@@ -423,7 +438,7 @@ def variant_multi_file_zip(filepath: str):
     num_decoys = random.randint(2, 5)
 
     # Decoy files - normal, benign-looking
-    for i in range(num_decoys):
+    for _ in range(num_decoys):
         payload = payload_document_lure()
         compressed = _compress_deflate(payload)
         crc = zlib.crc32(payload) & 0xFFFFFFFF
@@ -440,7 +455,7 @@ def variant_multi_file_zip(filepath: str):
             offsets[-1],
         )
 
-    # Hidden malicious file - Zombie ZIP pattern
+    # Structurally inconsistent inert target entry.
     mal_payload = payload_pe_header_lure()
     mal_compressed = _compress_deflate(mal_payload)
     mal_crc = zlib.crc32(mal_payload) & 0xFFFFFFFF
@@ -490,15 +505,16 @@ def variant_crc_mismatch(filepath: str):
 def variant_extra_field_noise(filepath: str):
     """
     VARIANT F - Junk bytes in extra field to confuse parser offsets
-    Extra field in LFH is padded with random bytes.
-    Some parsers miscalculate data offset and scan wrong bytes.
+    Extra field in LFH contains an unknown but well-formed TLV record.
+    Some parsers mishandle unfamiliar extra fields and scan wrong bytes.
     Zombie ZIP pattern preserved in method fields.
     """
     payload = payload_repetitive(random.randint(1024, 4096))
     compressed = _compress_deflate(payload)
     crc = zlib.crc32(payload) & 0xFFFFFFFF
     fname = random_filename(".dat")
-    extra = os.urandom(random.randint(8, 64))  # junk extra field
+    noise = _random_bytes(random.randint(8, 64))
+    extra = struct.pack("<HH", 0xCAFE, len(noise)) + noise
 
     local = _lfh(METHOD_STORE, crc, len(compressed), len(payload), fname, extra)
     local += compressed
@@ -572,7 +588,9 @@ VARIANTS = [
 # Total: 1150 samples across 8 distinct structural variants
 
 
-def generate_all():
+def generate_all(seed: int = DEFAULT_SEED):
+    random.seed(seed)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     # Clear existing synthetic malicious samples
     existing = list(Path(OUTPUT_DIR).glob("zombie_*.zip"))
     for file in existing:
@@ -583,22 +601,23 @@ def generate_all():
     for variant_name, func, count in VARIANTS:
         print(f"Generating variant {variant_name}: {count} samples...")
         for i in range(count):
-            filepath = os.path.join(OUTPUT_DIR, f"zombie_{variant_name}_{i:04d}.zip")
+            filepath = OUTPUT_DIR / f"zombie_{variant_name}_{i:04d}.zip"
             try:
                 func(filepath)
 
                 # Add decoy entries to normalize entry-count distribution.
-                with open(filepath, "rb") as file:
+                with filepath.open("rb") as file:
                     raw = file.read()
                 normalized = add_decoy_entries_raw(raw)
-                with open(filepath, "wb") as file:
+                with filepath.open("wb") as file:
                     file.write(normalized)
 
                 total += 1
             except Exception as exc:
-                print(f"  ERROR at {filepath}: {exc}")
+                raise RuntimeError(f"failed to generate {filepath}") from exc
 
     print(f"\nTotal generated: {total} samples across {len(VARIANTS)} variants")
+    print(f"Seed: {seed}")
     print(f"Saved to: {OUTPUT_DIR}")
 
     # Print variant breakdown

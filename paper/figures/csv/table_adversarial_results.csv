@@ -1,7 +1,0 @@
-Attack,Strategy,Features Neutralized,Evasion (ML only),Evasion (Hybrid),Residual weakness
-1 — Entropy Dilution (N≤10),Add low-entropy benign entries,suspicious_entry_ratio ↓,0%,0%,None at N≤10
-1 — Entropy Dilution (N≥50),Add 50+ low-entropy entries,ratio → 0.02,100%,0%,Fixed by Rule 1 (mismatch + entropy)
-2 — Method Harmonization,"Set LFH=CDH=STORE, keep payload compressed",method_mismatch = 0,100%,0%,Fixed by Rule 2 (STORE + high entropy)
-3 — Entropy Camouflage (N≤10),Add high-entropy consistent entries,suspicious_entry_ratio ↓,0%,0%,None at N≤10
-3 — Entropy Camouflage (N≥50),Add 50+ high-entropy entries,ratio → 0.02,100%,0%,Fixed by Rule 1 (mismatch + entropy)
-4 — Entropy Threshold (all levels),DEFLATE level 1–9,none — entropy stays ≥7.95,0%,0%,Never a threat

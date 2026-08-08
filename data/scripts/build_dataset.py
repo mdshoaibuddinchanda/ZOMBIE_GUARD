@@ -1,81 +1,103 @@
-import os
-import sys
+"""Extract the reproducible structural-evasion feature snapshot.
+
+Only generated files named ``zombie_*.zip`` may enter the positive class.
+Real malware is intentionally not auto-labelled: malware and ZIP-header
+evasion are different targets and require independent review.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.extractor import extract_features
+from zombieguard.extractor import extract_features
 
-MALICIOUS_DIR = "data/raw/malicious"
-BENIGN_DIR = "data/raw/benign"
-OUTPUT_FEATURES = "data/processed/features.csv"
-OUTPUT_LABELS = "data/processed/labels.csv"
+ROOT = Path(__file__).resolve().parents[2]
+POSITIVE_DIR = ROOT / "data" / "raw" / "malicious"
+BENIGN_DIR = ROOT / "data" / "raw" / "benign"
+OUTPUT_FEATURES = ROOT / "data" / "processed" / "features.csv"
+OUTPUT_LABELS = ROOT / "data" / "processed" / "labels.csv"
 
-os.makedirs("data/processed", exist_ok=True)
+EXPORT_FEATURES = [
+    "lf_compression_method",
+    "cd_compression_method",
+    "method_mismatch",
+    "data_entropy_shannon",
+    "data_entropy_renyi",
+    "declared_vs_entropy_flag",
+    "eocd_count",
+    "lf_unknown_method",
+    "file_size_bytes",
+    "entry_count",
+    "suspicious_entry_count",
+    "suspicious_entry_ratio",
+    "entropy_variance",
+    "lf_crc_valid",
+    "any_crc_mismatch",
+    "is_encrypted",
+]
 
 
-def process_directory(directory: str, label: int) -> list:
-    rows = []
-    files = []
-    for root, _dirs, names in os.walk(directory):
-        for name in names:
-            if name.lower().endswith(".zip"):
-                files.append(os.path.join(root, name))
+def process_directory(directory: Path, label: int) -> list[dict[str, object]]:
+    paths = sorted(path for path in directory.rglob("*.zip") if path.is_file())
+    if label == 1:
+        unexpected = [path.name for path in paths if not path.name.startswith("zombie_")]
+        if unexpected:
+            raise ValueError(
+                "Positive directory contains non-generated samples: "
+                + ", ".join(unexpected[:5])
+            )
 
-    files.sort()
-    print(f"\nProcessing {len(files)} files from {directory} (label={label})")
-
-    for i, file_path in enumerate(files):
-        filename = os.path.relpath(file_path, directory).replace("\\", "/")
-        features = extract_features(file_path)
-        features["filename"] = filename
-        features["label"] = label
-        rows.append(features)
-
-        if (i + 1) % 100 == 0:
-            print(f"  {i + 1}/{len(files)} done")
-
+    rows: list[dict[str, object]] = []
+    for path in paths:
+        features = extract_features(str(path))
+        if features.get("parse_status") != "ok":
+            raise ValueError(f"Could not parse {path}: {features.get('parse_error')}")
+        row = {column: features[column] for column in EXPORT_FEATURES}
+        row["filename"] = path.relative_to(directory).as_posix()
+        row["label"] = label
+        rows.append(row)
     return rows
 
 
-if __name__ == "__main__":
-    all_rows = []
-    all_rows += process_directory(MALICIOUS_DIR, label=1)
-    all_rows += process_directory(BENIGN_DIR, label=0)
-
-    df = pd.DataFrame(all_rows)
-
-    feature_cols = [
-        # Original signals
-        "lf_compression_method",
-        "cd_compression_method",
-        "method_mismatch",
-        "data_entropy_shannon",
-        "data_entropy_renyi",
-        "declared_vs_entropy_flag",
-        "eocd_count",
-        "lf_unknown_method",
-        "file_size_bytes",
-        # NEW - per-entry analysis
-        "entry_count",
-        "suspicious_entry_count",
-        "suspicious_entry_ratio",
-        "entropy_variance",
-        # NEW - CRC32 verification
-        "lf_crc_valid",
-        "any_crc_mismatch",
-        # NEW - encryption detection
-        "is_encrypted",
+def main() -> None:
+    rows = [
+        *process_directory(POSITIVE_DIR, label=1),
+        *process_directory(BENIGN_DIR, label=0),
     ]
+    if not rows:
+        raise RuntimeError("No ZIP samples found. Generate or provide safe fixtures first.")
 
-    print(f"\nDataset shape: {df.shape}")
-    print(f"Malicious: {(df['label'] == 1).sum()}")
-    print(f"Benign:    {(df['label'] == 0).sum()}")
-    print(f"NaN values: {df[feature_cols].isna().sum().sum()}")
+    frame = pd.DataFrame(rows).sort_values("filename")
+    if not frame["filename"].is_unique:
+        raise ValueError("Dataset contains duplicate filenames")
+    if set(frame["label"].astype(int)) != {0, 1}:
+        raise RuntimeError(
+            "Refusing to overwrite the release dataset without both positive and benign rows"
+        )
 
-    # Save features and labels separately
-    df[["filename"] + feature_cols].to_csv(OUTPUT_FEATURES, index=False)
-    df[["filename", "label"]].to_csv(OUTPUT_LABELS, index=False)
+    OUTPUT_FEATURES.parent.mkdir(parents=True, exist_ok=True)
+    feature_tmp = OUTPUT_FEATURES.with_name(f".{OUTPUT_FEATURES.name}.tmp")
+    label_tmp = OUTPUT_LABELS.with_name(f".{OUTPUT_LABELS.name}.tmp")
+    try:
+        frame[["filename", *EXPORT_FEATURES]].to_csv(
+            feature_tmp, index=False, lineterminator="\n"
+        )
+        frame[["filename", "label"]].to_csv(
+            label_tmp, index=False, lineterminator="\n"
+        )
+        feature_tmp.replace(OUTPUT_FEATURES)
+        label_tmp.replace(OUTPUT_LABELS)
+    finally:
+        feature_tmp.unlink(missing_ok=True)
+        label_tmp.unlink(missing_ok=True)
+    print(
+        f"Wrote {len(frame)} rows "
+        f"({int((frame['label'] == 1).sum())} positive, "
+        f"{int((frame['label'] == 0).sum())} benign)"
+    )
 
-    print(f"\nSaved features to: {OUTPUT_FEATURES}")
-    print(f"Saved labels to:   {OUTPUT_LABELS}")
+
+if __name__ == "__main__":
+    main()
