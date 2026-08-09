@@ -30,7 +30,9 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install project and development tools
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+        run: >-
+          python -m pip install --upgrade pip "setuptools>=83.0.0"
+          && python -m pip install -e ".[dev]"
 
       - name: Lint maintained code
         run: python -m ruff check src tests data/scripts scripts
@@ -64,7 +66,9 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install project and development tools
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+        run: >-
+          python -m pip install --upgrade pip "setuptools>=83.0.0"
+          && python -m pip install -e ".[dev]"
 
       - name: Run tests
         run: >-
@@ -150,7 +154,9 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install project
-        run: python -m pip install --upgrade pip && python -m pip install -e .
+        run: >-
+          python -m pip install --upgrade pip "setuptools>=83.0.0"
+          && python -m pip install -e .
 
       - name: Regenerate safe synthetic positives
         run: python data/scripts/generate_zombie_samples.py

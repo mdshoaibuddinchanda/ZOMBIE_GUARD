@@ -650,8 +650,8 @@
       "method": "next_float_above_higher_empirical_benign_quantile",
       "score_semantics": "uncalibrated_lightgbm_score"
     },
-    "metadata_sha256": "7f93bcd6f4be91e5ec06db50589c44dec2e2695225103e40ba031321d7932a0c",
-    "model_sha256": "ae526c3fb87be842028b2528c630059c045a69490b4ba7628ff1b225a59ae507",
+    "metadata_sha256": "113cf196b7a998100f94ed2479fd68865a719c6f34a2cec6504c721f6e636da2",
+    "model_sha256": "c9534fbddcd976eaa30e38dc188175b1b0c55ea36d32cd59ed7a64ef12a472ff",
     "threshold": 0.0023280164416682103,
     "training_rows": 2718,
     "verification_note": "The committed native model is schema-checked and SHA-256 verified. Dataset and evaluation results are deterministically recomputed; model text bytes are not compared with a retrain because LightGBM serialization may be platform-sensitive."
